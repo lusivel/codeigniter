@@ -180,7 +180,39 @@
 				
 			</div><!--/.col-->
 			
-
+			<div class="col-md-4">
+			
+				<div class="panel panel-blue">
+					<div class="panel-heading dark-overlay"><span class="glyphicon glyphicon-check"></span>To-do List</div>
+					<div class="panel-body">
+						<ul class="todo-list">
+						<li class="todo-list-item">
+								<div class="checkbox">
+									<input type="checkbox" id="checkbox" />
+									<label for="checkbox">Make a plan for today</label>
+								</div>
+								<div class="pull-right action-buttons">
+									<a href="#"><span class="glyphicon glyphicon-pencil"></span></a>
+									<a href="#" class="flag"><span class="glyphicon glyphicon-flag"></span></a>
+									<a href="#" class="trash"><span class="glyphicon glyphicon-trash"></span></a>
+								</div>
+							</li>
+							<li class="todo-list-item">
+								<div class="checkbox">
+									<input type="checkbox" id="checkbox" />
+									<label for="checkbox">Update Basecamp</label>
+								</div>
+								<div class="pull-right action-buttons">
+									<a href="#"><span class="glyphicon glyphicon-pencil"></span></a>
+									<a href="#" class="flag"><span class="glyphicon glyphicon-flag"></span></a>
+									<a href="#" class="trash"><span class="glyphicon glyphicon-trash"></span></a>
+								</div>
+							</li>
+							<li class="todo-list-item">
+								<div class="checkbox">
+									<input type="checkbox" id="checkbox" />
+									<label for="checkbox">Send email to Jane</label>
+								</div>
 								<div class="pull-right action-buttons">
 									<a href="#"><span class="glyphicon glyphicon-pencil"></span></a>
 									<a href="#" class="flag"><span class="glyphicon glyphicon-flag"></span></a>
@@ -235,32 +267,3 @@
 			</div><!--/.col-->
 		</div><!--/.row-->
 	</div>	<!--/.main-->
-
-	<script src="js/jquery-1.11.1.min.js"></script>
-	<script src="js/bootstrap.min.js"></script>
-	<script src="js/chart.min.js"></script>
-	<script src="js/chart-data.js"></script>
-	<script src="js/easypiechart.js"></script>
-	<script src="js/easypiechart-data.js"></script>
-	<script src="js/bootstrap-datepicker.js"></script>
-	<script>
-		$('#calendar').datepicker({
-		});
-
-		!function ($) {
-		    $(document).on("click","ul.nav li.parent > a > span.icon", function(){          
-		        $(this).find('em:first').toggleClass("glyphicon-minus");      
-		    }); 
-		    $(".sidebar span.icon").find('em:first').addClass("glyphicon-plus");
-		}(window.jQuery);
-
-		$(window).on('resize', function () {
-		  if ($(window).width() > 768) $('#sidebar-collapse').collapse('show')
-		})
-		$(window).on('resize', function () {
-		  if ($(window).width() <= 767) $('#sidebar-collapse').collapse('hide')
-		})
-	</script>	
-</body>
-
-</html>

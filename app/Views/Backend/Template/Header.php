@@ -9,6 +9,7 @@
     <link href="css/datepicker3.css" rel="stylesheet" />
     <link href="css/bootstrap-table.css" rel="stylesheet" />
     <link href="css/styles.css" rel="stylesheet" />
+    <link href="/Assets/css/sweetalert2.min.css" rel="stylesheet">
 
     <!--[if lt IE 9]>
       <script src="js/html5shiv.js"></script>
