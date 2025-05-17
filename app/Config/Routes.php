@@ -22,3 +22,11 @@ $routes->post('/admin/simpan-data-admin', 'Admin::simpan_data_admin');
 $routes->get('/admin/edit-data-admin/(:alphanum)', 'Admin::edit_data_admin/$1');
 $routes->post('/admin/update-admin', 'Admin::update_data_admin');
 $routes->get('/admin/hapus-data-admin/(:alphanum)', 'Admin::hapus_data_admin/$1');
+
+//routes untuk module anggota
+$routes->get('/anggota/master-data-anggota', 'Anggota::master_data_anggota');
+$routes->get('/anggota/input-data-anggota', 'Anggota::input_data_anggota');
+$routes->post('/anggota/simpan-data-anggota', 'Anggota::simpan_data_anggota');
+$routes->get('/anggota/edit-data-anggota/(:alphanum)', 'Anggota::edit_data_anggota/$1');
+$routes->post('/anggota/update-anggota', 'Anggota::update_data_anggota'); 
+$routes->get('/anggota/hapus-data-anggota/(:alphanum)', 'Anggota::hapus_data_anggota/$1');

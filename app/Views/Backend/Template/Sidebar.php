@@ -12,12 +12,12 @@
 						</a>
 					</li>
 					<li>
-						<a href="<?=base_url('admin/master-data-anggota');?>">
+						<a href="<?=base_url('anggota/master-data-anggota');?>">
 							<span class="glyphicon glyphicon-share-alt"></span> Data Anggota
 						</a>
 					</li>
 					<li>
-						<a href="<?=base_url('admin/master-data-kategori');?>">
+						<a href="<?=base_url('anggota/master-data-kategori');?>">
 							<span class="glyphicon glyphicon-share-alt"></span> Data Kategori
 						</a>
 					</li>
