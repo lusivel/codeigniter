@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Login Aplikasi Perpustakaan</title>
 
-<link href="Assets/css/bootstrap.min.css" rel="stylesheet">
-<link href="Assets/css/datepicker3.css" rel="stylesheet">
-<link href="Assets/css/styles.css" rel="stylesheet">
-<link href="Assets/css/sweetalert2.min.css" rel="stylesheet">
+<link href="/Assets/css/bootstrap.min.css" rel="stylesheet">
+<link href="/Assets/css/datepicker3.css" rel="stylesheet">
+<link href="/Assets/css/styles.css" rel="stylesheet">
+<link href="/Assets/css/sweetalert2.min.css" rel="stylesheet">
 <!--[if lt IE 9]>
 <script src="js/html5shiv.js"></script>
 <script src="js/respond.min.js"></script>
@@ -21,12 +21,12 @@
 	<div class="row">
 		<div class="col-xs-10 col-xs-offset-1 col-sm-8 col-sm-offset-2 col-md-4 col-md-offset-4">
 			<div class="login-panel panel panel-default">
-				<div class="panel-heading">Log in</div>
+				<div class="panel-heading">Login</div>
 				<div class="panel-body">
-					<form role="form" action ="<?=base_url('admin/autentikasi-login');?>" method="post">
+					<form role="form" action ="<?= base_url('admin/autentikasi-login');?>" method="post">
 						<fieldset>
 							<div class="form-group">
-								<input class="form-control" placeholder="Username" name="email" type="username" autofocus="">
+								<input class="form-control" placeholder="Username" name="username" type="text" autofocus="">
 							</div>
 							<div class="form-group">
 								<input class="form-control" placeholder="Password" name="password" type="password" value="">
@@ -46,14 +46,14 @@
 	
 		
 
-	<script src="Assets/js/jquery-1.11.1.min.js"></script>
-	<script src="Assets/js/bootstrap.min.js"></script>
-	<script src="Assets/js/chart.min.js"></script>
-	<script src="Assets/js/chart-data.js"></script>
-	<script src="Assets/js/easypiechart.js"></script>
-	<script src="Assets/js/easypiechart-data.js"></script>
-	<script src="Assets/js/bootstrap-datepicker.js"></script>
-	<script src="Assets/js/sweetalert2.min.js"></script>
+	<script src="/Assets/js/jquery-1.11.1.min.js"></script>
+	<script src="/Assets/js/bootstrap.min.js"></script>
+	<script src="/Assets/js/chart.min.js"></script>
+	<script src="/Assets/js/chart-data.js"></script>
+	<script src="/Assets/js/easypiechart.js"></script>
+	<script src="/Assets/js/easypiechart-data.js"></script>
+	<script src="/Assets/js/bootstrap-datepicker.js"></script>
+	<script src="/Assets/js/sweetalert2.min.js"></script>
 	<script>
 		!function ($) {
 			$(document).on("click","ul.nav li.parent > a > span.icon", function(){		  

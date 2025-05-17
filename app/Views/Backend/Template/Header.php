@@ -5,16 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Aplikasi Perpustakaan Berbasis Web</title>
 
-    <link href="css/bootstrap.min.css" rel="stylesheet" />
-    <link href="css/datepicker3.css" rel="stylesheet" />
-    <link href="css/bootstrap-table.css" rel="stylesheet" />
-    <link href="css/styles.css" rel="stylesheet" />
+    <link href="/Assets/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/Assets/css/datepicker3.css" rel="stylesheet" />
+    <link href="/Assets/css/bootstrap-table.css" rel="stylesheet" />
+    <link href="/Assets/css/styles.css" rel="stylesheet" />
     <link href="/Assets/css/sweetalert2.min.css" rel="stylesheet">
 
     <!--[if lt IE 9]>
       <script src="js/html5shiv.js"></script>
       <script src="js/respond.min.js"></script>
     <![endif]-->
+  <script type="text/javascript"> 
+ function getkey(e){ 
+  if (window.event) 
+  return window.event.keyCode; 
+  else if (e) 
+  return e.which; 
+  else 
+  return null; 
+ } 
+ 
+ function goodchars(e, goods, field){ 
+  var key, keychar; 
+  key = getkey(e); 
+  if (key == null) return true; 
+ 
+  keychar = String.fromCharCode(key); 
+  //keychar = keychar.toLowerCase(); 
+  //goods = goods.toLowerCase(); 
+ 
+  // check goodkeys 
+  if (goods.indexOf(keychar) != -1) 
+  return true; 
+  // control keys 
+  if ( key==null || key==0 || key==8 || key==9 || key==27 ) 
+  return true; 
+ 
+  if (key == 13) { 
+   var i; 
+   for (i = 0; i < field.form.elements.length; i++) 
+   if (field == field.form.elements[i]) 
+   break; 
+   i = (i + 1) % field.form.elements.length; 
+   field.form.elements[i].focus(); 
+   return false; 
+  }; 
+  // else return false 
+  return false; 
+ } 
+</script> 
+  
   </head>
 
   <body>
