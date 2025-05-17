@@ -95,7 +95,7 @@ class Admin extends BaseController
         } else {
             echo view('Backend/Template/Header');
             echo view('Backend/Template/Sidebar');
-            echo view('Backend/MasterAdmin/input-admin');
+            echo view('Backend/MasterAdmin/input-data-admin');
             echo view('Backend/Template/Footer');
         }
     }
