@@ -1,219 +1,183 @@
 <?php
 
-namespace App\Controllers; 
+namespace App\Controllers;
 
-use App\Controllers\BaseController; 
-use App\Models\M_Buku; // Memuat Model Buku
-use App\Models\M_Kategori; // Memuat Model Kategori
-use App\Models\M_Rak;     // Memuat Model Rak
-use CodeIgniter\Validation\Validation; // Memuat library Validasi
+use App\Models\M_Buku;
+use App\Models\M_Kategori;
+use App\Models\M_Rak;
 
-class Buku extends BaseController 
+class Buku extends BaseController
 {
-    protected $bukuModel;
-    protected $kategoriModel;
-    protected $rakModel;
-    protected $session; 
-    protected $validation; 
+    protected $mBuku;
+    protected $mKategori;
+    protected $mRak;
+    protected $session;
+    protected $db;
 
     public function __construct()
     {
-        // Inisialisasi Model, Session, dan Validation Service
-        $this->bukuModel = new M_Buku(); 
-        $this->kategoriModel = new M_Kategori(); 
-        $this->rakModel = new M_Rak();     
-        
-        helper(['form', 'url', 'date']); 
-        $this->session = \Config\Services::session(); 
-        $this->validation = \Config\Services::validation(); 
+        $this->mBuku = new M_Buku();
+        $this->mKategori = new M_Kategori();
+        $this->mRak = new M_Rak();
+        helper(['form', 'url', 'date', 'filesystem']);
+        $this->session = \Config\Services::session();
+        $this->db = \Config\Database::connect();
     }
 
     /**
-     * Menampilkan master data buku.
-     * URL: /admin/buku/master-data-buku
+     * Memastikan user sudah login.
+     * Mengembalikan RedirectResponse jika tidak login, atau true jika login.
+     * @return \CodeIgniter\HTTP\RedirectResponse|bool
      */
+    private function isLoggedIn()
+    {
+        if (!$this->session->get('ses_id') || !$this->session->get('ses_user') || !$this->session->get('ses_level')) {
+            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
+            return redirect()->to(base_url('admin/login-admin'));
+        }
+        return true;
+    }
+
     public function master_data_buku()
     {
-        // Pengecekan sesi login admin
-        if (!$this->session->get('isLoggedIn')) {
-            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            return redirect()->to(base_url('admin/login-admin'));
+        if (($check = $this->isLoggedIn()) !== true) {
+            return $check;
         }
 
-        $data['web_title'] = "Master Data Buku"; // Judul halaman
-        // Mengambil semua data buku yang aktif
-        $data['data_buku'] = $this->bukuModel->get_all_active_buku(); 
-        $data['pages'] = 'buku'; // Untuk highlight di sidebar
+        $uri = service('uri');
         
-        // Memuat view header, sidebar, master data buku, dan footer
-        echo view('Backend/Template/Header', $data); 
-        echo view('Backend/Template/Sidebar', $data); 
-        echo view('Backend/MasterBuku/master-data-buku', $data); 
-        echo view('Backend/Template/Footer', $data);
-    }
+        $dataBuku = $this->mBuku->getActiveBuku();
 
-    /**
-     * Menampilkan form input data buku baru.
-     * URL: /admin/buku/input-data-buku
-     */
-    public function input_data_buku()
-    {
-        // Pengecekan sesi login admin
-        if (!$this->session->get('isLoggedIn')) {
-            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            return redirect()->to(base_url('admin/login-admin'));
-        }
+        $data['pages']     = $uri->getSegment(2) ?? 'master-data-buku';
+        $data['data_buku'] = $dataBuku;
+        $data['web_title'] = "Master Data Buku";
 
-        $data['web_title'] = "Input Data Buku"; // Judul halaman
-        // Mengambil daftar kategori dan rak aktif untuk dropdown
-        $data['data_kategori'] = $this->kategoriModel->get_all_kategori_aktif(); 
-        $data['data_rak'] = $this->rakModel->get_all_rak_aktif();
-        $data['pages'] = 'buku'; 
-        
-        // Memuat view header, sidebar, input data buku, dan footer
         echo view('Backend/Template/Header', $data);
         echo view('Backend/Template/Sidebar', $data);
-        echo view('Backend/MasterBuku/input-data-buku', $data); // View form input buku
+        echo view('Backend/MasterBuku/master-data-buku', $data);
         echo view('Backend/Template/Footer', $data);
     }
 
-    /**
-     * Metode internal untuk upload file (cover buku atau e-book).
-     * @param string $fileInputName Nama input file di form (misal: 'cover_buku').
-     * @param string $uploadPathSubDir Sub-direktori di 'uploads/' tempat file akan disimpan.
-     * @param array $allowedMimes Array mime type yang diizinkan.
-     * @return array Status upload ('success', 'error', 'no_file') dan nama file atau pesan error.
-     */
-    private function _upload_file_ci4($fileInputName, $uploadPathSubDir, $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'])
+    public function input_data_buku()
     {
-        $file = $this->request->getFile($fileInputName);
-
-        // Memeriksa apakah ada file yang diupload dan valid
-        if ($file && $file->isValid() && !$file->hasMoved()) {
-            // Memeriksa tipe file
-            if (!in_array($file->getMimeType(), $allowedMimes)) {
-                return ['status' => 'error', 'error_message' => 'Tipe file tidak diizinkan: ' . $file->getMimeType()];
-            }
-            // Memeriksa ukuran file (maksimal 5MB)
-            if ($file->getSize() > (5 * 1024 * 1024)) {
-                 return ['status' => 'error', 'error_message' => 'Ukuran file melebihi 5MB.'];
-            }
-            
-            // Menggenerate nama file baru yang unik
-            $newName = $file->getRandomName(); 
-            // Memindahkan file ke direktori tujuan
-            if ($file->move(FCPATH . 'uploads/' . $uploadPathSubDir, $newName)) { 
-                return ['status' => 'success', 'file_name' => $newName];
-            } else {
-                return ['status' => 'error', 'error_message' => $file->getErrorString() . '(' . $file->getError() . ')'];
-            }
-        } elseif ($file && $file->getError() == UPLOAD_ERR_NO_FILE) { 
-            // Jika tidak ada file yang diupload
-            return ['status' => 'no_file', 'file_name' => null]; 
-        } elseif ($file && $file->getError()) {
-            // Jika ada error upload selain tidak ada file
-            return ['status' => 'error', 'error_message' => $file->getErrorString() . '(' . $file->getError() . ')']; 
+        if (($check = $this->isLoggedIn()) !== true) {
+            return $check;
         }
-        return ['status' => 'no_file', 'file_name' => null]; 
+
+        $data['web_title'] = "Input Data Buku";
+        $data['kategori_list'] = $this->mKategori->getActiveKategori();
+        $data['rak_list'] = $this->mRak->getActiveRak();
+
+        echo view('Backend/Template/Header', $data);
+        echo view('Backend/Template/Sidebar', $data);
+        echo view('Backend/MasterBuku/input-data-buku', $data); // Menggunakan input-data-buku sesuai permintaan terakhir
+        echo view('Backend/Template/Footer', $data);
     }
 
-    /**
-     * Menyimpan data buku baru.
-     * URL: /admin/buku/simpan-data-buku (POST)
-     */
     public function simpan_data_buku()
     {
-        // Pengecekan sesi login admin
-        if (!$this->session->get('isLoggedIn')) {
-            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            return redirect()->to(base_url('admin/login-admin'));
+        if (($check = $this->isLoggedIn()) !== true) {
+            return $check;
         }
 
         // --- DEFINISI ATURAN VALIDASI ---
         $rules = [
-            'id_buku'           => [
-                'label' => 'ID Buku',
-                'rules' => 'required|trim|max_length[6]|is_unique[tbl_buku.id_buku]',
+            'judul_buku' => 'required|min_length[3]|max_length[200]|is_unique[tbl_buku.judul_buku,is_delete_buku,0]',
+            'pengarang' => 'required|min_length[3]|max_length[50]',
+            'penerbit' => 'required|min_length[3]|max_length[50]',
+            'tahun_terbit' => 'required|numeric|exact_length[4]|greater_than_equal_to[1900]|less_than_equal_to[' . date('Y') . ']',
+            'jumlah_eksemplar' => 'required|numeric|greater_than[0]',
+            'id_kategori' => 'required',
+            'id_rak' => 'required',
+            'cover_buku' => [
+                'rules'  => 'max_size[cover_buku,1024]|is_image[cover_buku]|mime_in[cover_buku,image/jpg,image/jpeg,image/png,image/gif]',
                 'errors' => [
-                    'required' => '{field} tidak boleh kosong.',
-                    'max_length' => '{field} maksimal {param} karakter.',
-                    'is_unique' => '{field} sudah ada di database.'
+                    'max_size'  => 'Ukuran cover buku maksimal 1MB.',
+                    'is_image'  => 'File harus berupa gambar.',
+                    'mime_in'   => 'Format gambar yang diizinkan: jpg, jpeg, png, gif.'
                 ]
             ],
-            'judul_buku'        => 'required|min_length[3]|max_length[200]',
-            'pengarang'         => 'permit_empty|max_length[50]', // permit_empty jika tidak wajib
-            'penerbit'          => 'permit_empty|max_length[50]', // permit_empty jika tidak wajib
-            'tahun_terbit'      => 'required|exact_length[4]|numeric', // Sesuaikan dengan nama kolom DB
-            'jumlah_eksemplar'  => 'required|numeric|greater_than_equal_to[0]',
-            'id_kategori'       => 'required',
-            'id_rak'            => 'required',
-            'keterangan'        => 'permit_empty|max_length[500]', // permit_empty jika tidak wajib
-            'cover_buku'        => 'permit_empty|max_size[cover_buku,5120]|is_image[cover_buku]|mime_in[cover_buku,image/jpg,image/jpeg,image/gif,image/png]',
-            'e_book'            => 'permit_empty|max_size[e_book,5120]|ext_in[e_book,pdf,epub,mobi,doc,docx]'
+            'e_book' => [
+                'rules'  => 'max_size[e_book,10240]|mime_in[e_book,application/pdf]', // 10MB
+                'errors' => [
+                    'max_size'  => 'Ukuran e-book maksimal 10MB.',
+                    'mime_in'   => 'Format e-book yang diizinkan: pdf.'
+                ]
+            ],
         ];
 
-        // --- JALANKAN VALIDASI ---
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
         // Mengambil data dari POST request
-        $data_buku = [
-            'id_buku'           => trim($this->request->getPost('id_buku')), // Trim spasi
-            'judul_buku'        => $this->request->getPost('judul_buku'),
-            'pengarang'         => $this->request->getPost('pengarang'),
-            'penerbit'          => $this->request->getPost('penerbit'),
-            'tahun_terbit'      => $this->request->getPost('tahun_terbit'), // Ambil dari input 'tahun_terbit'
-            'jumlah_eksemplar'  => $this->request->getPost('jumlah_eksemplar'),
-            'id_kategori'       => $this->request->getPost('id_kategori'),
-            'keterangan'        => $this->request->getPost('keterangan'),
-            'id_rak'            => $this->request->getPost('id_rak'),
-            'is_delete_buku'    => '0', // Status aktif
-            'stok_buku'         => $this->request->getPost('jumlah_eksemplar'), // Stok awal sama dengan jumlah eksemplar
-            'created_at'        => date('Y-m-d H:i:s'), 
-            'updated_at'        => date('Y-m-d H:i:s')
+        $judul_buku         = $this->request->getPost('judul_buku');
+        $pengarang          = $this->request->getPost('pengarang');
+        $penerbit           = $this->request->getPost('penerbit');
+        $tahun_terbit       = $this->request->getPost('tahun_terbit');
+        $jumlah_eksemplar   = $this->request->getPost('jumlah_eksemplar');
+        $id_kategori        = $this->request->getPost('id_kategori');
+        $id_rak             = $this->request->getPost('id_rak');
+        $keterangan         = $this->request->getPost('keterangan');
+
+        // --- Logika Upload Cover Buku ---
+        $fileCover = $this->request->getFile('cover_buku');
+        $namaCover = null;
+        if ($fileCover && $fileCover->isValid() && !$fileCover->hasMoved()) {
+            $namaCover = $fileCover->getRandomName();
+            $fileCover->move(FCPATH . 'uploads/covers', $namaCover);
+        }
+
+        // --- Logika Upload E-Book ---
+        $fileEbook = $this->request->getFile('e_book');
+        $namaEbook = null;
+        if ($fileEbook && $fileEbook->isValid() && !$fileEbook->hasMoved()) {
+            $namaEbook = $fileEbook->getRandomName();
+            $fileEbook->move(FCPATH . 'uploads/ebooks', $namaEbook);
+        }
+
+        // Generate ID buku otomatis
+        $hasilAutoNumber = $this->mBuku->autoNumber(); // Diperbaiki: Tidak ada lagi ->getRowArray()
+        $id_buku = "BK0001";
+        if ($hasilAutoNumber && !empty($hasilAutoNumber['id_buku'])) {
+            $kode   = $hasilAutoNumber['id_buku'];
+            $noUrut = (int)substr($kode, 2);
+            $noUrut++;
+            $id_buku = "BK" . sprintf("%04s", $noUrut);
+        }
+
+        // Menyiapkan data untuk disimpan
+        $dataSimpan = [
+            'id_buku'           => $id_buku,
+            'judul_buku'        => $judul_buku,
+            'pengarang'         => $pengarang,
+            'penerbit'          => $penerbit,
+            'tahun_terbit'      => $tahun_terbit,
+            'jumlah_eksemplar'  => $jumlah_eksemplar,
+            'id_kategori'       => $id_kategori,
+            'id_rak'            => $id_rak,
+            'keterangan'        => $keterangan,
+            'cover_buku'        => $namaCover,
+            'e_book'            => $namaEbook,
+            'is_delete_buku'    => 0, // Default aktif
+            'created_at'        => date('Y-m-d H:i:s'),
+            'updated_at'        => date('Y-m-d H:i:s'),
         ];
 
-        // --- Proses Upload Cover Buku ---
-        $upload_cover = $this->_upload_file_ci4('cover_buku', 'cover_buku/', ['image/jpeg', 'image/png', 'image/gif']);
-        if ($upload_cover['status'] == 'success') {
-            $data_buku['cover_buku'] = $upload_cover['file_name'];
-        } elseif ($upload_cover['status'] == 'error') {
-            $this->session->setFlashdata('error_upload_cover', $upload_cover['error_message']);
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        } elseif ($upload_cover['status'] == 'no_file') {
-            $data_buku['cover_buku'] = NULL; // Jika tidak ada file, set ke NULL
-        }
-
-        // --- Proses Upload E-Book ---
-        $upload_ebook = $this->_upload_file_ci4('e_book', 'e_book/', ['application/pdf', 'application/epub+zip', 'application/x-mobipocket-ebook', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
-        if ($upload_ebook['status'] == 'success') {
-            $data_buku['e_book'] = $upload_ebook['file_name'];
-        } elseif ($upload_ebook['status'] == 'error') {
-            // Jika upload e-book gagal, dan cover sudah terupload, hapus cover yang sudah terupload
-            $this->session->setFlashdata('error_upload_ebook', $upload_ebook['error_message']);
-            if (!empty($data_buku['cover_buku']) && file_exists(FCPATH . 'uploads/cover_buku/' . $data_buku['cover_buku'])) {
-                unlink(FCPATH . 'uploads/cover_buku/' . $data_buku['cover_buku']);
+        try {
+            if ($this->mBuku->insert($dataSimpan)) {
+                $this->session->setFlashdata('success', 'Data Buku Berhasil Ditambahkan!');
+                return redirect()->to(base_url('admin/buku/master-data-buku'));
+            } else {
+                $error = $this->db->error(); 
+                log_message('error', 'Gagal menyimpan buku (insert returned false): ' . $error['message'] . ' - SQL: ' . $this->db->getLastQuery());
+                $this->session->setFlashdata('error', 'Gagal menyimpan data buku. Terjadi masalah saat memasukkan data.');
+                return redirect()->back()->withInput();
             }
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        } elseif ($upload_ebook['status'] == 'no_file') {
-            $data_buku['e_book'] = NULL; // Jika tidak ada file, set ke NULL
-        }
-        
-        // Memanggil method insert() dari model
-        if ($this->bukuModel->insert($data_buku)) { 
-            $this->session->setFlashdata('success', 'Data buku berhasil disimpan!');
-            return redirect()->to(base_url('admin/buku/master-data-buku')); 
-        } else {
-            $this->session->setFlashdata('error', 'Gagal menyimpan data buku ke database. Periksa log error.');
-            // Jika penyimpanan ke DB gagal, hapus juga file yang sudah diupload
-            if (!empty($data_buku['cover_buku']) && file_exists(FCPATH . 'uploads/cover_buku/' . $data_buku['cover_buku'])) {
-                unlink(FCPATH . 'uploads/cover_buku/' . $data_buku['cover_buku']);
-            }
-            if (!empty($data_buku['e_book']) && file_exists(FCPATH . 'uploads/e_book/' . $data_buku['e_book'])) {
-                unlink(FCPATH . 'uploads/e_book/' . $data_buku['e_book']);
-            }
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        } catch (\Exception $e) {
+            log_message('error', 'Gagal menyimpan buku (exception): ' . $e->getMessage());
+            $this->session->setFlashdata('error', 'Gagal menyimpan data buku. Terjadi kesalahan sistem. Silakan coba lagi nanti.');
+            return redirect()->back()->withInput();
         }
     }
 
@@ -221,39 +185,32 @@ class Buku extends BaseController
      * Menampilkan form edit data buku.
      * URL: /admin/buku/edit-data-buku/{id_buku} (GET)
      */
-    public function edit_data_buku($id_buku = null) { 
-        // Pengecekan sesi login admin
-        if (!$this->session->get('isLoggedIn')) {
-            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            return redirect()->to(base_url('admin/login-admin'));
+    public function edit_data_buku($id_buku = null)
+    {
+        if (($check = $this->isLoggedIn()) !== true) {
+            return $check;
         }
 
-        // Validasi ID buku dari URL
         if (empty($id_buku)) {
             $this->session->setFlashdata('error', 'ID Buku tidak valid.');
             return redirect()->to(base_url('admin/buku/master-data-buku'));
         }
 
-        // Mengambil data buku berdasarkan ID
-        $buku = $this->bukuModel->find($id_buku); 
+        $dataBuku = $this->mBuku->withDeleted()->find($id_buku);
 
-        // Memeriksa apakah data buku ditemukan atau sudah di-soft delete
-        if (empty($buku) || ($buku['is_delete_buku'] ?? '0') == '1') {
+        if (!$dataBuku || ($dataBuku['is_delete_buku'] ?? 0) == 1) {
             $this->session->setFlashdata('error', 'Data buku tidak ditemukan atau sudah dihapus.');
             return redirect()->to(base_url('admin/buku/master-data-buku'));
         }
         
         $data['web_title'] = "Edit Data Buku";
-        $data['data_buku'] = $buku; 
-        // Mengambil daftar kategori dan rak aktif untuk dropdown
-        $data['data_kategori'] = $this->kategoriModel->get_all_kategori_aktif(); 
-        $data['data_rak'] = $this->rakModel->get_all_rak_aktif();
-        $data['pages'] = 'buku';
+        $data['data_buku'] = $dataBuku;
+        $data['kategori_list'] = $this->mKategori->getActiveKategori();
+        $data['rak_list'] = $this->mRak->getActiveRak();
 
-        // Memuat view header, sidebar, form edit buku, dan footer
         echo view('Backend/Template/Header', $data);
         echo view('Backend/Template/Sidebar', $data);
-        echo view('Backend/MasterBuku/edit-buku', $data); 
+        echo view('Backend/MasterBuku/edit-buku', $data);
         echo view('Backend/Template/Footer', $data);
     }
 
@@ -261,107 +218,147 @@ class Buku extends BaseController
      * Memperbarui data buku.
      * URL: /admin/buku/update-data-buku (POST)
      */
-    public function update_data_buku() {
-        // Pengecekan sesi login admin
-        if (!$this->session->get('isLoggedIn')) {
-            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            return redirect()->to(base_url('admin/login-admin'));
+    public function update_data_buku()
+    {
+        if (($check = $this->isLoggedIn()) !== true) {
+            return $check;
         }
 
-        // Mengambil ID buku dari hidden input form
-        $id_buku_update = $this->request->getPost('id_buku_hidden'); 
+        $idUpdate = $this->request->getPost('id_buku');
 
-        // Validasi ID buku
-        if(empty($id_buku_update)){
+        if (empty($idUpdate)) {
             $this->session->setFlashdata('error', 'ID Buku tidak valid untuk update.');
             return redirect()->to(base_url('admin/buku/master-data-buku'));
         }
         
+        // Ambil data buku lama untuk validasi is_unique dan path file lama
+        $oldBookData = $this->mBuku->withDeleted()->find($idUpdate);
+        if (!$oldBookData) {
+            $this->session->setFlashdata('error', 'Data buku tidak ditemukan untuk diperbarui.');
+            return redirect()->to(base_url('admin/buku/master-data-buku'));
+        }
+
         // --- DEFINISI ATURAN VALIDASI UNTUK UPDATE ---
         $rules = [
-            'judul_buku'        => 'required|min_length[3]|max_length[200]',
-            'pengarang'         => 'permit_empty|max_length[50]',
-            'penerbit'          => 'permit_empty|max_length[50]',
-            'tahun_terbit'      => 'required|exact_length[4]|numeric',
-            'jumlah_eksemplar'  => 'required|numeric|greater_than_equal_to[0]',
-            'id_kategori'       => 'required',
-            'id_rak'            => 'required',
-            'keterangan'        => 'permit_empty|max_length[500]',
-            'cover_buku'        => 'permit_empty|max_size[cover_buku,5120]|is_image[cover_buku]|mime_in[cover_buku,image/jpg,image/jpeg,image/gif,image/png]',
-            'e_book'            => 'permit_empty|max_size[e_book,5120]|ext_in[e_book,pdf,epub,mobi,doc,docx]'
+            'judul_buku' => [
+                'label' => 'Judul Buku',
+                // Mengembalikan is_unique dengan pengecualian ID saat ini dan is_delete_buku = 0
+                'rules' => "required|min_length[3]|max_length[200]|is_unique[tbl_buku.judul_buku,id_buku,{$idUpdate},is_delete_buku,0]", 
+                'errors' => [
+                    'required' => '{field} tidak boleh kosong.',
+                    'min_length' => '{field} minimal {param} karakter.',
+                    'max_length' => '{field} maksimal {param} karakter.',
+                    'is_unique' => '{field} sudah digunakan oleh buku lain yang aktif.' 
+                ]
+            ],
+            'pengarang' => 'required|min_length[3]|max_length[50]',
+            'penerbit' => 'required|min_length[3]|max_length[50]',
+            'tahun_terbit' => 'required|numeric|exact_length[4]|greater_than_equal_to[1900]|less_than_equal_to[' . date('Y') . ']',
+            'jumlah_eksemplar' => 'required|numeric|greater_than[0]',
+            'id_kategori' => 'required',
+            'id_rak' => 'required',
+            'cover_buku' => [
+                'rules'  => 'if_exist|max_size[cover_buku,1024]|is_image[cover_buku]|mime_in[cover_buku,image/jpg,image/jpeg,image/png,image/gif]',
+                'errors' => [
+                    'max_size'  => 'Ukuran cover buku maksimal 1MB.',
+                    'is_image'  => 'File harus berupa gambar.',
+                    'mime_in'   => 'Format gambar yang diizinkan: jpg, jpeg, png, gif.'
+                ]
+            ],
+            'e_book' => [
+                'rules'  => 'if_exist|max_size[e_book,10240]|mime_in[e_book,application/pdf]', // 10MB
+                'errors' => [
+                    'max_size'  => 'Ukuran e-book maksimal 10MB.',
+                    'mime_in'   => 'Format e-book yang diizinkan: pdf.'
+                ]
+            ],
         ];
 
-        // --- JALANKAN VALIDASI ---
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        // Mengambil data buku lama untuk memeriksa file yang ada
-        $buku_lama = $this->bukuModel->find($id_buku_update); 
-        if (!$buku_lama) {
-             $this->session->setFlashdata('error', 'Data buku yang akan diupdate tidak ditemukan.');
-             return redirect()->to(base_url('admin/buku/master-data-buku'));
+        $judul_buku         = $this->request->getPost('judul_buku');
+        $pengarang          = $this->request->getPost('pengarang');
+        $penerbit           = $this->request->getPost('penerbit');
+        $tahun_terbit       = $this->request->getPost('tahun_terbit');
+        $jumlah_eksemplar   = $this->request->getPost('jumlah_eksemplar');
+        $id_kategori        = $this->request->getPost('id_kategori');
+        $id_rak             = $this->request->getPost('id_rak');
+        $keterangan         = $this->request->getPost('keterangan');
+
+        $oldCover    = $oldBookData['cover_buku'] ?? null;
+        $oldEbook    = $oldBookData['e_book'] ?? null;
+
+        // --- Logika Upload Cover Buku ---
+        $fileCover = $this->request->getFile('cover_buku');
+        $namaCover = $oldCover; // Defaultnya pakai nama cover lama
+        // Jika ada file cover baru diupload
+        if ($fileCover && $fileCover->isValid() && !$fileCover->hasMoved()) {
+            // Hapus cover lama jika ada
+            if ($oldCover && file_exists(FCPATH . 'uploads/covers/' . $oldCover)) {
+                unlink(FCPATH . 'uploads/covers/' . $oldCover);
+            }
+            $namaCover = $fileCover->getRandomName();
+            $fileCover->move(FCPATH . 'uploads/covers', $namaCover);
+        } 
+        // Logika asumsikan ada hidden input 'clear_cover' di form (atau checkbox)
+        else if ($this->request->getPost('clear_cover') == '1') {
+            if ($oldCover && file_exists(FCPATH . 'uploads/covers/' . $oldCover)) {
+                unlink(FCPATH . 'uploads/covers/' . $oldCover);
+            }
+            $namaCover = null;
+        }
+
+        // --- Logika Upload E-Book ---
+        $fileEbook = $this->request->getFile('e_book');
+        $namaEbook = $oldEbook; // Defaultnya pakai nama ebook lama
+        // Jika ada file e-book baru diupload
+        if ($fileEbook && $fileEbook->isValid() && !$fileEbook->hasMoved()) {
+            // Hapus e-book lama jika ada
+            if ($oldEbook && file_exists(FCPATH . 'uploads/ebooks/' . $oldEbook)) {
+                unlink(FCPATH . 'uploads/ebooks/' . $oldEbook);
+            }
+            $namaEbook = $fileEbook->getRandomName();
+            $fileEbook->move(FCPATH . 'uploads/ebooks', $namaEbook);
+        }
+        // Logika asumsikan ada hidden input 'clear_ebook' di form (atau checkbox)
+        else if ($this->request->getPost('clear_ebook') == '1') {
+            if ($oldEbook && file_exists(FCPATH . 'uploads/ebooks/' . $oldEbook)) {
+                unlink(FCPATH . 'uploads/ebooks/' . $oldEbook);
+            }
+            $namaEbook = null;
         }
 
         // Menyiapkan data untuk diperbarui
-        $data_update = [
-            'judul_buku'        => $this->request->getPost('judul_buku'),
-            'pengarang'         => $this->request->getPost('pengarang'),
-            'penerbit'          => $this->request->getPost('penerbit'),
-            'tahun_terbit'      => $this->request->getPost('tahun_terbit'),
-            'jumlah_eksemplar'  => $this->request->getPost('jumlah_eksemplar'),
-            'id_kategori'       => $this->request->getPost('id_kategori'),
-            'keterangan'        => $this->request->getPost('keterangan'),
-            'id_rak'            => $this->request->getPost('id_rak'),
-            'updated_at'        => date('Y-m-d H:i:s')
+        $dataUpdate = [
+            'judul_buku'        => $judul_buku,
+            'pengarang'         => $pengarang,
+            'penerbit'          => $penerbit,
+            'tahun_terbit'      => $tahun_terbit,
+            'jumlah_eksemplar'  => $jumlah_eksemplar,
+            'id_kategori'       => $id_kategori,
+            'id_rak'            => $id_rak,
+            'keterangan'        => $keterangan,
+            'cover_buku'        => $namaCover,
+            'e_book'            => $namaEbook,
+            'updated_at'        => date('Y-m-d H:i:s'),
         ];
 
-        // --- Proses Upload Cover Buku (Update) ---
-        $upload_cover = $this->_upload_file_ci4('cover_buku', 'cover_buku/', ['image/jpeg', 'image/png', 'image/gif']);
-        if ($upload_cover['status'] == 'success') {
-            $data_update['cover_buku'] = $upload_cover['file_name'];
-            // Hapus cover lama jika ada dan bukan default
-            if (!empty($buku_lama['cover_buku']) && $buku_lama['cover_buku'] != 'default_cover.png' && file_exists(FCPATH . 'uploads/cover_buku/' . $buku_lama['cover_buku'])) {
-                unlink(FCPATH . 'uploads/cover_buku/' . $buku_lama['cover_buku']);
+        try {
+            if ($this->mBuku->update($idUpdate, $dataUpdate)) {
+                $this->session->setFlashdata('success', 'Data Buku Berhasil Diperbarui!');
+                return redirect()->to(base_url('admin/buku/master-data-buku'));
+            } else {
+                $error = $this->db->error();
+                log_message('error', 'Gagal memperbarui buku (update returned false): ' . $error['message'] . ' - SQL: ' . $this->db->getLastQuery());
+                $this->session->setFlashdata('error', 'Gagal memperbarui data buku. Terjadi masalah saat memperbarui data.');
+                return redirect()->back()->withInput();
             }
-        } elseif ($upload_cover['status'] == 'error') {
-            $this->session->setFlashdata('error_upload_cover', $upload_cover['error_message']);
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        }
-        // Jika status 'no_file', tidak perlu update cover_buku, biarkan yang lama
-
-        // --- Proses Upload E-Book (Update) ---
-        $upload_ebook = $this->_upload_file_ci4('e_book', 'e_book/', ['application/pdf', 'application/epub+zip', 'application/x-mobipocket-ebook', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
-        if ($upload_ebook['status'] == 'success') {
-            $data_update['e_book'] = $upload_ebook['file_name'];
-            // Hapus e-book lama jika ada
-            if (!empty($buku_lama['e_book']) && file_exists(FCPATH . 'uploads/e_book/' . $buku_lama['e_book'])) {
-                unlink(FCPATH . 'uploads/e_book/' . $buku_lama['e_book']);
-            }
-        } elseif ($upload_ebook['status'] == 'error') {
-            $this->session->setFlashdata('error_upload_ebook', $upload_ebook['error_message']);
-            // Jika upload e-book gagal, dan cover baru sudah terupload, hapus cover baru tersebut
-            if (isset($data_update['cover_buku']) && $data_update['cover_buku'] != ($buku_lama['cover_buku'] ?? null) && file_exists(FCPATH . 'uploads/cover_buku/' . $data_update['cover_buku'])) {
-                unlink(FCPATH . 'uploads/cover_buku/' . $data_update['cover_buku']);
-            }
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        }
-        // Jika status 'no_file', tidak perlu update e_book, biarkan yang lama
-        
-        // Memanggil method update() dari model
-        if ($this->bukuModel->update($id_buku_update, $data_update)) { 
-            $this->session->setFlashdata('success', 'Data buku berhasil diupdate!');
-            return redirect()->to(base_url('admin/buku/master-data-buku'));
-        } else {
-            $this->session->setFlashdata('error', 'Gagal mengupdate data buku ke database. Periksa log error.');
-            // Jika update ke DB gagal, hapus file yang baru saja diupload
-            if (isset($data_update['cover_buku']) && $data_update['cover_buku'] != ($buku_lama['cover_buku'] ?? null) && file_exists(FCPATH . 'uploads/cover_buku/' . $data_update['cover_buku'])) {
-                unlink(FCPATH . 'uploads/cover_buku/' . $data_update['cover_buku']);
-            }
-            if (isset($data_update['e_book']) && $data_update['e_book'] != ($buku_lama['e_book'] ?? null) && file_exists(FCPATH . 'uploads/e_book/' . $data_update['e_book'])) {
-                unlink(FCPATH . 'uploads/e_book/' . $data_update['e_book']);
-            }
-            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        } catch (\Exception $e) {
+            log_message('error', 'Gagal memperbarui buku (exception): ' . $e->getMessage());
+            $this->session->setFlashdata('error', 'Gagal memperbarui data buku. Terjadi kesalahan sistem. Silakan coba lagi nanti.');
+            return redirect()->back()->withInput();
         }
     }
 
@@ -369,40 +366,55 @@ class Buku extends BaseController
      * Menghapus data buku (soft delete).
      * URL: /admin/buku/hapus-data-buku/{id_buku} (POST)
      */
-    public function hapus_data_buku($id_buku = null) { 
-        // Pengecekan sesi login admin
-        if (!$this->session->get('isLoggedIn')) {
-            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            return redirect()->to(base_url('admin/login-admin'));
+    public function hapus_data_buku($id_buku = null)
+    {
+        if (($check = $this->isLoggedIn()) !== true) {
+            return $check;
         }
 
-        // Validasi ID buku dari URL
         if (empty($id_buku)) {
             $this->session->setFlashdata('error', 'ID Buku tidak valid untuk dihapus.');
             return redirect()->to(base_url('admin/buku/master-data-buku'));
         }
 
-        // Mengambil data buku untuk memastikan keberadaan sebelum menghapus
-        $buku = $this->bukuModel->find($id_buku);
+        $buku = $this->mBuku->withDeleted()->find($id_buku);
 
-        // Memeriksa apakah data buku ditemukan dan belum di-soft delete
-        if (empty($buku) || ($buku['is_delete_buku'] ?? '0') == '1') {
-            $this->session->setFlashdata('error', 'Data buku tidak ditemukan atau sudah dihapus.');
+        if (!$buku) {
+            $this->session->setFlashdata('error', 'Data buku tidak ditemukan!');
             return redirect()->to(base_url('admin/buku/master-data-buku'));
         }
 
-        // Menyiapkan data untuk soft delete
-        $data_update = [
-            'is_delete_buku' => '1', // Set status menjadi tidak aktif
-            'updated_at'=> date('Y-m-d H:i:s')
-        ];
-
-        // Memanggil method update() dari model untuk soft delete
-        if ($this->bukuModel->update($id_buku, $data_update)) { 
-            $this->session->setFlashdata('success', 'Data buku berhasil dihapus (soft delete)!');
+        if (($buku['is_delete_buku'] ?? 0) == 1) {
+            $this->session->setFlashdata('error', 'Data buku sudah dihapus sebelumnya!');
             return redirect()->to(base_url('admin/buku/master-data-buku'));
-        } else {
-            $this->session->setFlashdata('error', 'Gagal menghapus data buku. Periksa log error.');
+        }
+
+        // Ambil nama file cover dan e-book untuk dihapus fisik
+        $cover_buku_file = $buku['cover_buku'] ?? null;
+        $e_book_file     = $buku['e_book'] ?? null;
+
+        try {
+            // Lakukan soft delete di database
+            if ($this->mBuku->delete($id_buku)) {
+                // Hapus file fisik jika soft delete berhasil
+                if ($cover_buku_file && file_exists(FCPATH . 'uploads/covers/' . $cover_buku_file)) {
+                    unlink(FCPATH . 'uploads/covers/' . $cover_buku_file);
+                }
+                if ($e_book_file && file_exists(FCPATH . 'uploads/ebooks/' . $e_book_file)) {
+                    unlink(FCPATH . 'uploads/ebooks/' . $e_book_file);
+                }
+
+                $this->session->setFlashdata('success', 'Data Buku Berhasil Dihapus!');
+                return redirect()->to(base_url('admin/buku/master-data-buku'));
+            } else {
+                $error = $this->db->error();
+                log_message('error', 'Gagal menghapus buku (delete returned false): ' . $error['message'] . ' - SQL: ' . $this->db->getLastQuery());
+                $this->session->setFlashdata('error', 'Gagal menghapus data buku. Terjadi masalah saat menghapus data.');
+                return redirect()->back();
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'Gagal menghapus buku (exception): ' . $e->getMessage());
+            $this->session->setFlashdata('error', 'Gagal menghapus data buku. Terjadi kesalahan sistem. Silakan coba lagi nanti.');
             return redirect()->back();
         }
     }

@@ -47,3 +47,11 @@ $routes->post('admin/kategori/simpan-data-kategori', 'Kategori::simpan_data_kate
 $routes->get('admin/kategori/edit-data-kategori/(:any)', 'Kategori::edit_data_kategori/$1'); // Tambahkan 'admin/'
 $routes->post('admin/kategori/update-data-kategori', 'Kategori::update_data_kategori'); // Tambahkan 'admin/'
 $routes->post('admin/kategori/hapus-data-kategori/(:any)', 'Kategori::hapus_data_kategori/$1'); // Tambahkan 'admin/' dan ubah GET ke POST
+
+// --- ROUTES BARU UNTUK MODULE BUKU ---
+$routes->get('admin/buku/master-data-buku', 'Buku::master_data_buku'); // <-- Perhatikan baris ini
+$routes->get('admin/buku/input-data-buku', 'Buku::input_data_buku');
+$routes->post('admin/buku/simpan-data-buku', 'Buku::simpan_data_buku');
+$routes->get('admin/buku/edit-data-buku/(:any)', 'Buku::edit_data_buku/$1');
+$routes->post('admin/buku/update-data-buku', 'Buku::update_data_buku');
+$routes->post('admin/buku/hapus-data-buku/(:any)', 'Buku::hapus_data_buku/$1');

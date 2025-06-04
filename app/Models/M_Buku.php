@@ -4,102 +4,70 @@ use CodeIgniter\Model;
 
 class M_Buku extends Model
 {
-    protected $table      = 'tbl_buku'; // Nama tabel di database
-    protected $primaryKey = 'id_buku';  // Primary key tabel
+    protected $table      = 'tbl_buku';
+    protected $primaryKey = 'id_buku';  
     
-    // Properti Model dasar CodeIgniter 4
-    protected $useAutoIncrement = false; // ID buku tidak auto-increment (misal: BK0001)
-    protected $returnType     = 'array'; // Mengembalikan hasil dalam bentuk array
-    protected $useSoftDeletes = false; // Mengatur soft delete secara manual di method
+    protected $useAutoIncrement = false; // Karena id_buku Anda generate manual "BK0001"
+    protected $returnType     = 'array'; // Atau 'object'
+    protected $useSoftDeletes = true; // <-- Ini yang mengaktifkan fitur soft delete untuk tbl_buku
+    protected $deletedField   = 'is_delete_buku'; // <-- Ini menunjuk ke kolom 'is_delete_buku' Anda di tbl_buku
 
-    // Field yang diizinkan untuk diisi pada tabel tbl_buku
-    // SANGAT PENTING: SESUAIKAN DENGAN KOLOM REAL DI DATABASE MASTER
     protected $allowedFields = [
-        'id_buku', 'judul_buku', 'pengarang', 'penerbit', 'tahun_terbit', // 'tahun_terbit' sesuai DB
+        'id_buku', 'judul_buku', 'pengarang', 'penerbit', 'tahun_terbit',
         'jumlah_eksemplar', 'id_kategori', 'id_rak', 'keterangan',
-        'cover_buku', 'e_book', 'is_delete_buku', 'stok_buku', // Pastikan 'stok_buku' ada di tabel
-        'created_at', 'updated_at' 
-    ]; 
+        'cover_buku', 'e_book', 'stok_buku'
+    ];
 
-    // Pengaturan Timestamp untuk created_at dan updated_at
-    protected $useTimestamps = true; 
-    protected $dateFormat    = 'datetime'; 
-    protected $createdField  = 'created_at'; 
-    protected $updatedField  = 'updated_at'; 
+    protected $useTimestamps = true;
+    protected $dateFormat    = 'datetime';
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
 
-    // Pengaturan Validasi (Opsional, bisa juga di Controller)
-    protected $validationRules      = [];
-    protected $validationMessages   = [];
-    protected $skipValidation       = false;
-    protected $cleanValidationRules = true;
+    protected $validationRules    = [];
+    protected $validationMessages = [];
+    protected $skipValidation     = false;
 
-    // Callbacks (Opsional) - Dihapus jika tidak ada logika callback
-    // protected $allowCallbacks = true;
-    // protected $beforeInsert   = [];
-    // protected $afterInsert    = [];
-    // protected $beforeUpdate   = [];
-    // protected $afterUpdate    = []; 
-    // protected $beforeFind     = [];
-    // protected $afterFind      = []; 
-    // protected $beforeDelete   = [];
-    // protected $afterDelete    = []; 
+    protected $allowCallbacks = true;
+    protected $beforeInsert   = [];
+    protected $afterInsert    = [];
+    protected $beforeUpdate   = [];
+    protected $afterUpdate    = [];
+    protected $beforeFind     = [];
+    protected $afterFind      = [];
+    protected $beforeDelete   = [];
+    protected $afterDelete    = [];
 
     /**
-     * Mengambil semua data buku yang aktif (is_delete_buku = '0')
-     * dan melakukan JOIN ke tabel kategori dan rak untuk mendapatkan nama.
-     * @return array Array of book data.
+     * Mengambil ID buku terakhir untuk auto-generate ID string (BKxxxx).
+     * Hanya mempertimbangkan buku yang TIDAK di-soft delete untuk nomor urut.
+     * @return array|null Sebuah array asosiatif dengan 'id_buku' terakhir atau null jika tidak ada.
      */
-    public function get_all_active_buku()
+    public function autoNumber()
     {
-        return $this->db->table($this->table)
-                        ->select('tbl_buku.*, tbl_kategori.nama_kategori, tbl_rak.nama_rak') 
-                        ->join('tbl_kategori', 'tbl_kategori.id_kategori = tbl_buku.id_kategori', 'LEFT')
-                        ->join('tbl_rak', 'tbl_rak.id_rak = tbl_buku.id_rak', 'LEFT')
-                        ->where('tbl_buku.is_delete_buku', '0') 
-                        ->orderBy('tbl_buku.judul_buku', 'ASC')
-                        ->get()
-                        ->getResultArray();
-    }
-
-    /**
-     * Mengambil data buku berdasarkan ID.
-     * Mengambil SEMUA KOLOM yang dibutuhkan, termasuk stok_buku.
-     * @param string $id_buku ID dari buku.
-     * @return array|null Book data or null if not found.
-     */
-    public function get_buku_by_id($id_buku)
-    {
-        return $this->select('*')->find($id_buku); 
-    }
-
-    /**
-     * Mengambil daftar buku yang tersedia untuk dipinjam.
-     * Kriteria: jumlah_eksemplar > 0 dan belum dihapus.
-     * @return array Array of available book data.
-     */
-    public function getAvailableBooks() 
-    {
-        return $this->db->table($this->table)
-                        ->select('tbl_buku.*, tbl_kategori.nama_kategori, tbl_rak.nama_rak')
-                        ->join('tbl_kategori', 'tbl_kategori.id_kategori = tbl_buku.id_kategori', 'LEFT')
-                        ->join('tbl_rak', 'tbl_rak.id_rak = tbl_buku.id_rak', 'LEFT')
-                        ->where('tbl_buku.is_delete_buku', '0') 
-                        ->where('tbl_buku.jumlah_eksemplar >', 0) 
-                        ->orderBy('tbl_buku.judul_buku', 'ASC')
-                        ->get()
-                        ->getResultArray();
-    }
-
-    /**
-     * Mengambil data buku yang aktif dan tersedia untuk dipinjam berdasarkan ID.
-     * @param string $id_buku ID dari buku.
-     * @return array|null Book data or null if not found.
-     */
-    public function getActiveAndAvailableBookById($id_buku) 
-    {
-        return $this->where('id_buku', $id_buku)
-                    ->where('is_delete_buku', '0') 
-                    ->where('jumlah_eksemplar >', 0) 
+        // selectMax() sudah cukup. Karena `$useSoftDeletes` true, 
+        // secara default hanya record dengan `is_delete_buku = 0` yang akan dipertimbangkan.
+        return $this->selectMax($this->primaryKey, 'id_buku')
+                    ->orderBy($this->primaryKey, 'DESC')
                     ->first(); 
+    }
+
+    /**
+     * Mengambil daftar semua buku yang aktif (is_delete_buku = '0') dengan join kategori dan rak.
+     * @return array Array of active buku data.
+     */
+    public function getActiveBuku()
+    {
+        // Pastikan nama kolom dan tabel sudah benar dan konsisten.
+        // `findAll()` akan secara otomatis menambahkan `WHERE is_delete_buku = 0` karena `$useSoftDeletes = true`.
+        // Jadi, `->where('tbl_buku.is_delete_buku', 0)` di sini sebenarnya redundan namun tidak salah.
+        return $this->select('tbl_buku.*, tbl_kategori.nama_kategori, tbl_rak.nama_rak')
+                    ->join('tbl_kategori', 'tbl_kategori.id_kategori = tbl_buku.id_kategori', 'left')
+                    ->join('tbl_rak', 'tbl_rak.id_rak = tbl_buku.id_rak', 'left')
+                    // Kondisi where ini secara eksplisit merujuk ke tabel terkait
+                    ->where('tbl_buku.is_delete_buku', 0) // Status buku
+                    ->where('tbl_kategori.is_delete_kategori', 0) // Status kategori
+                    ->where('tbl_rak.is_delete_rak', 0) // Status rak
+                    ->orderBy('tbl_buku.judul_buku', 'ASC')
+                    ->findAll(); 
     }
 }

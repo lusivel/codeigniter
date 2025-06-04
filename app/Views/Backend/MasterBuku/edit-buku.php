@@ -49,9 +49,7 @@
                     <form action="<?= base_url('admin/buku/update-data-buku');?>" method="post" enctype="multipart/form-data">
                         <?= csrf_field(); // Penting untuk keamanan di CodeIgniter 4 ?>
 
-                        <input type="hidden" name="id_buku_hidden" value="<?= esc($data_buku['id_buku'] ?? old('id_buku_hidden')); ?>">
-
-                        <div class="form-group col-md-6">
+                        <input type="hidden" name="id_buku" value="<?= esc($data_buku['id_buku'] ?? old('id_buku')); ?>"> <div class="form-group col-md-6">
                             <label>ID Buku</label>
                             <input type="text" class="form-control" value="<?= esc($data_buku['id_buku'] ?? ''); ?>" readonly>
                         </div>
@@ -98,8 +96,8 @@
                             <label>Kategori Buku</label>
                             <select name="id_kategori" class="form-control" required="required">
                                 <option value="">Pilih Kategori</option>
-                                <?php if (!empty($data_kategori)): ?>
-                                    <?php foreach($data_kategori as $kategori): ?>
+                                <?php if (!empty($kategori_list)): // Perbaikan: Gunakan $kategori_list ?>
+                                    <?php foreach($kategori_list as $kategori): ?>
                                     <option value="<?= esc($kategori['id_kategori']); ?>" <?= old('id_kategori', $data_buku['id_kategori'] ?? '') == $kategori['id_kategori'] ? 'selected' : ''; ?>><?= esc($kategori['nama_kategori']); ?></option>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -116,9 +114,9 @@
                             <label>Rak</label>
                             <select name="id_rak" class="form-control" required="required">
                                 <option value="">Pilih Rak</option>
-                                <?php if (!empty($data_rak)): ?>
-                                    <?php foreach($data_rak as $rak): ?>
-                                    <option value="<?= esc($rak['id_rak']); ?>" <?= old('id_rak', $data_buku['id_rak'] ?? '') == $rak['id_rak'] ? 'selected' : ''; ?>><?= esc($rak['nama_rak']); ?> (<?= esc($rak['lokasi_rak'] ?? '-'); ?>)</option>
+                                <?php if (!empty($rak_list)): // Perbaikan: Gunakan $rak_list ?>
+                                    <?php foreach($rak_list as $rak): ?>
+                                    <option value="<?= esc($rak['id_rak']); ?>" <?= old('id_rak', $data_buku['id_rak'] ?? '') == $rak['id_rak'] ? 'selected' : ''; ?>><?= esc($rak['nama_rak']); ?></option>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <option value="" disabled>Tidak ada rak aktif.</option>
@@ -129,26 +127,23 @@
                             <?php endif; ?>
                         </div>
                         <div class="form-group col-md-6">
-                            <label>Cover Buku (Max: 5MB, Tipe: JPG, PNG, GIF, JPEG)</label>
-                            <input type="file" class="form-control" name="cover_buku" accept="image/jpeg,image/png,image/gif">
+                            <label>Cover Buku (Max: 1MB, Tipe: JPG, PNG, GIF)</label> <input type="file" class="form-control" name="cover_buku" accept="image/jpeg,image/png,image/gif">
                             <?php if (session()->getFlashdata('errors') && isset(session()->getFlashdata('errors')['cover_buku'])): ?>
                                 <small class="text-danger"><?= esc(session()->getFlashdata('errors')['cover_buku']); ?></small>
                             <?php endif; ?>
                             <?php if (!empty($data_buku['cover_buku'])): ?>
-                                <p><small>Cover saat ini: <a href="<?= base_url('uploads/cover_buku/' . esc($data_buku['cover_buku'])); ?>" target="_blank"><?= esc($data_buku['cover_buku']); ?></a></small></p>
-                            <?php endif; ?>
+                                <p><small>Cover saat ini: <a href="<?= base_url('uploads/covers/' . esc($data_buku['cover_buku'])); ?>" target="_blank"><?= esc($data_buku['cover_buku']); ?></a></small></p>
+                                <input type="hidden" name="existing_cover" value="<?= esc($data_buku['cover_buku']); ?>"> <?php endif; ?>
                         </div>
                         <div style="clear:both;"></div>
 
                         <div class="form-group col-md-6">
-                            <label>File E-Book (Max: 5MB, Tipe: PDF, EPUB, MOBI, DOC, DOCX)</label>
-                            <input type="file" class="form-control" name="e_book" accept=".pdf,.epub,.mobi,.doc,.docx">
-                            <?php if (session()->getFlashdata('errors') && isset(session()->getFlashdata('errors')['e_book'])): ?>
+                            <label>File E-Book (Max: 10MB, Tipe: PDF)</label> <input type="file" class="form-control" name="e_book" accept="application/pdf"> <?php if (session()->getFlashdata('errors') && isset(session()->getFlashdata('errors')['e_book'])): ?>
                                 <small class="text-danger"><?= esc(session()->getFlashdata('errors')['e_book']); ?></small>
                             <?php endif; ?>
                             <?php if (!empty($data_buku['e_book'])): ?>
-                                <p><small>E-Book saat ini: <a href="<?= base_url('uploads/e_book/' . esc($data_buku['e_book'])); ?>" target="_blank"><?= esc($data_buku['e_book']); ?></a></small></p>
-                            <?php endif; ?>
+                                <p><small>E-Book saat ini: <a href="<?= base_url('uploads/ebooks/' . esc($data_buku['e_book'])); ?>" target="_blank"><?= esc($data_buku['e_book']); ?></a></small></p>
+                                <input type="hidden" name="existing_ebook" value="<?= esc($data_buku['e_book']); ?>"> <?php endif; ?>
                         </div>
                         <div class="form-group col-md-12">
                             <label>Keterangan</label>
