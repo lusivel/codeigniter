@@ -1,41 +1,67 @@
-<?php
-
-namespace App\Models;
+<?php namespace App\Models;
 
 use CodeIgniter\Model;
 
 class M_Rak extends Model
 {
-    protected $table = 'tbl_rak';
+    protected $table      = 'tbl_rak';
+    protected $primaryKey = 'id_rak';
+    
+    protected $useAutoIncrement = false;
+    protected $returnType     = 'array';
+    protected $useSoftDeletes = true;
+    protected $deletedField   = 'is_delete_rak';
 
-    public function getDataRak($where = false)
+    protected $allowedFields = [
+        'id_rak', 'nama_rak',
+        // 'lokasi_rak' dihapus karena tidak ada di DB
+        'is_delete_rak',
+        'created_at', 'updated_at'
+    ];
+
+    protected $useTimestamps = true;
+    protected $dateFormat    = 'datetime';
+    protected $createdField  = 'created_at';
+    protected $updatedField  = 'updated_at';
+
+    protected $validationRules    = [];
+    protected $validationMessages = [];
+    protected $skipValidation     = false;
+
+    protected $allowCallbacks = true;
+    protected $beforeInsert   = [];
+    protected $afterInsert    = [];
+    protected $beforeUpdate   = [];
+    protected $afterUpdate    = [];
+    protected $beforeFind     = [];
+    protected $afterFind      = [];
+    protected $beforeDelete   = [];
+    protected $afterDelete    = [];
+
+    /**
+     * Mengambil ID rak terakhir untuk auto-generate ID string (RAKxxx).
+     * @return object Query Result object.
+     */
+    public function autoNumber()
     {
-        if ($where === false) {
-            $builder = $this->db->table($this->table);
-            $builder->select('*');
-            $builder->orderBy('nama_rak', 'ASC');
-            $query   = $builder->get();
-            return $query;
-        } else {
-            $builder = $this->db->table($this->table);
-            $builder->select('*');
-            $builder->where($where);
-            $builder->orderBy('nama_rak', 'ASC');
-            $query   = $builder->get();
-            return $query;
-        }
+        $builder = $this->withDeleted(true)->builder();
+        $builder->select($this->primaryKey);
+        $builder->orderBy($this->primaryKey, "DESC");
+        $builder->limit(1);
+        return $builder->get();
     }
 
-    public function saveDataRak($data)
+    /**
+     * Mengambil daftar semua rak yang aktif (is_delete_rak = '0').
+     *
+     * @return array Array of active rak data.
+     */
+    public function getActiveRak()
     {
-        $builder = $this->db->table($this->table);
-        return $builder->insert($data);
-    }
-
-    public function updateDataRak($data, $where)
-    {
-        $builder = $this->db->table($this->table);
-        $builder->where($where);
-        return $builder->update($data);
+        return $this->builder()
+                    ->where('is_delete_rak', 0)
+                    ->orderBy('nama_rak', 'ASC')
+                    ->get()
+                    ->getResultArray();
     }
 }

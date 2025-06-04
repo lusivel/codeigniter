@@ -15,15 +15,8 @@ use CodeIgniter\Filters\SecureHeaders;
 
 class Filters extends BaseFilters
 {
-    /**
-     * Configures aliases for Filter classes to
-     * make reading things nicer and simpler.
-     *
-     * @var array<string, class-string|list<class-string>>
-     *
-     * [filter_name => classname]
-     * or [filter_name => [classname1, classname2, ...]]
-     */
+    // ... (bagian atas file ini tidak berubah)
+
     public array $aliases = [
         'csrf'          => CSRF::class,
         'toolbar'       => DebugToolbar::class,
@@ -34,6 +27,8 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'auth'          => \App\Filters\AuthFilter::class, // <<<--- TAMBAHKAN BARIS INI
+        // Pastikan namespace dan nama class filter Master sudah benar (\App\Filters\AuthFilter)
     ];
 
     /**

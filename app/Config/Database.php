@@ -27,9 +27,9 @@ class Database extends Config
     public array $default = [
         'DSN'          => '',
         'hostname'     => 'localhost',
-        'username'     => '',
-        'password'     => '',
-        'database'     => '',
+        'username'     => 'root',      // Biasanya 'root' untuk XAMPP/WAMP/Laragon default
+        'password'     => '',          // Biasanya KOSONG untuk XAMPP/WAMP/Laragon default (jika tidak pernah diset)
+        'database'     => 'perpus_db', // <--- GANTI DENGAN NAMA DATABASE MASTER YANG BENAR!
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,

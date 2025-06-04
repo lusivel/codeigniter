@@ -1,70 +1,79 @@
 <div class="col-sm-9 col-sm-offset-3 col-lg-10 col-lg-offset-2 main">
     <div class="row">
         <ol class="breadcrumb">
-            <li><a href="#"><span class="glyphicon glyphicon-home"></span></a></li>
-            <li>Master Data Rak</li>
+            <li><a href="<?= base_url('admin/dashboard'); ?>"><span class="glyphicon glyphicon-home"></span></a></li>
+            <li>Master Data</li>
+            <li class="active">Data Rak</li>
         </ol>
-    </div>
-
-    <div class="row">
+    </div><div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">Master Data Rak</h1>
+        </div>
+    </div><div class="row">
         <div class="col-lg-12">
             <div class="panel panel-default">
+                <div class="panel-heading">
+                    Daftar Rak
+                    <a href="<?= base_url('admin/rak/input-data-rak'); ?>" class="btn btn-primary btn-sm pull-right">
+                        <span class="glyphicon glyphicon-plus"></span> Input Data Rak
+                    </a>
+                </div>
                 <div class="panel-body">
-                    <h3>Master Data Rak
-                        <a href="<?= base_url('rak/input-data-rak');?>"><button type="button" class="btn btn-sm btn-primary pull-right">Input Data Rak
-                        </button></a>
-                    </h3>
-                    <hr />
-                    <table data-toggle="table" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" data-search="true" data-select-item-name="toolbar1" data-pagination="true" data-sort-name="name" data-sort-order="desc">
+                    <?php if (session()->getFlashdata('success')) : ?>
+                        <div class="alert alert-success alert-dismissible" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <?= session()->getFlashdata('success'); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (session()->getFlashdata('error')) : ?>
+                        <div class="alert alert-danger alert-dismissible" role="alert">
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <?= session()->getFlashdata('error'); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <table data-toggle="table" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" data-search="true" data-select-item-name="toolbar1" data-pagination="true" data-sort-name="nama_rak" data-sort-order="asc">
                         <thead>
                             <tr>
-                                <th data-sortable="true">#</th>
+                                <th data-sortable="true">No</th>
+                                <th data-sortable="true">ID Rak</th>
                                 <th data-sortable="true">Nama Rak</th>
-                                <th data-sortable="true">Opsi</th>
+                                <th>Opsi</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php
-                            $no = 0;
-                            foreach($data_rak as $data){
-                            ?>
-                            <tr>
-                                <td data-sortable="true"><?= $no=$no+1;?></td>
-                                <td data-sortable="true"><?= $data['nama_rak'];?></td>
-                                <td data-sortable="true">
-                                    <?php
-                                    if(session()->get('ses_level')=="1" || session()->get('ses_level')=="3"){
-                                    ?>
-                                    <a href="<?= base_url('rak/edit-data-rak/'.sha1($data['id_rak']));?>"><button type="button" class="btn btn-sm btn-success">Edit</button></a>
-                                    <a href="#" onclick="doDelete('<?= sha1($data['id_rak']);?>')"><button type="button" class="btn btn-sm btn-danger">Hapus</button></a>
-                                    <?php }
-                                    else echo "#"; ?>
-                                 </td>
-                            </tr>
-                            <?php } ?>
+                            <?php if (!empty($data_rak)) : ?>
+                                <?php $no = 1; foreach ($data_rak as $rak) : ?>
+                                    <tr>
+                                        <td><?= $no++; ?></td>
+                                        <td><?= esc($rak['id_rak']); ?></td>
+                                        <td><?= esc($rak['nama_rak']); ?></td>
+                                        <td>
+                                            <a href="<?= base_url('admin/rak/edit-data-rak/' . esc($rak['id_rak'])); ?>" class="btn btn-sm btn-info" title="Edit Data">
+                                                <i class="glyphicon glyphicon-pencil"></i> Edit
+                                            </a>
+                                            <form action="<?= base_url('admin/rak/hapus-data-rak/' . esc($rak['id_rak'])); ?>" method="post" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data rak ini?');">
+                                                <?= csrf_field(); ?>
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Hapus Data">
+                                                    <i class="glyphicon glyphicon-trash"></i> Hapus
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else : ?>
+                                <tr>
+                                    <td colspan="5" class="text-center">Tidak ada data rak yang ditemukan.</td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
-                     </table>
+                    </table>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-<script type="text/javascript">
-    function doDelete(idDelete){
-        swal({
-            title : "Hapus Data Rak?",
-            text : "Data ini akan terhapus secara permanen!!",
-            icon : "warning",
-            buttons : true,
-            dangerMode : false,
-        })
-        .then(ok => {
-            if(ok){
-                window.location.href = '<?= base_url();?>/rak/hapus-data-rak/' + idDelete;
-            }
-            else{
-                $(this).removeAttr('disabled')
-            }
-        })
-    }
-</script>
+    </div></div>

@@ -4,204 +4,207 @@ namespace App\Controllers;
 
 use App\Models\M_Anggota;
 
-class Anggota extends BaseController
+class Anggota extends BaseController // Pastikan BaseController Anda memuat helper 'session' dan 'validation'
 {
-    public function login()
+    protected $mAnggota;
+    protected $session;
+
+    public function __construct()
     {
-        return view('Backend/Login/login_anggota'); // sesuaikan view login anggota
+        $this->mAnggota = new M_Anggota();
+        helper(['form', 'url', 'date']);
+        $this->session = \Config\Services::session();
     }
 
-    public function dashboard()
-    {
-        if (session()->get('ses_id') == "" or session()->get('ses_user') == "" or session()->get('ses_level') == "") {
-            session()->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            ?>
-            <script>
-                document.location = "<?= base_url('anggota/login-anggota'); ?>";
-            </script>
-            <?php
-        } else {
-            echo view('Backend/Template/Header');
-            echo view('Backend/Template/Sidebar');
-            echo view('Backend/Login/dashboard_anggota'); // sesuaikan view dashboard anggota
-            echo view('Backend/Template/Footer');
-        }
-    }
-
-    public function autentikasi()
-    {
-        $modelAnggota  = new M_Anggota(); // proses inisiasi model
-        $email         = $this->request->getPost('email');
-        $password      = $this->request->getPost('password');
-
-        $cekEmail = $modelAnggota->getDataAnggota(['email' => $email, 'is_delete_anggota' => '0'])->getNumRows();
-        if ($cekEmail == 0) {
-            session()->setFlashdata('error', 'Email Tidak Ditemukan!');
-            ?>
-            <script>
-                history.go(-1);
-            </script>
-            <?php
-        } else {
-            $dataUser      = $modelAnggota->getDataAnggota(['email' => $email, 'is_delete_anggota' => '0'])->getRowArray();
-            $passwordUser  = $dataUser['password_anggota'];
-
-            $verifikasiPassword = password_verify($password, $passwordUser);
-            if (!$verifikasiPassword) {
-                session()->setFlashdata('error', 'Password Tidak Sesuai!');
-                ?>
-                <script>
-                    history.go(-1);
-                </script>
-                <?php
-            } else {
-                $dataSession = [
-                    'ses_id'    => $dataUser['id_anggota'],
-                    'ses_user'  => $dataUser['nama_anggota'],
-                    'ses_level' => 'anggota', // atau jika ada level khusus di anggota, sesuaikan
-                ];
-                session()->set($dataSession);
-                session()->setFlashdata('success', 'Login Berhasil!');
-                ?>
-                <script>
-                    document.location = "<?= base_url('anggota/dashboard-anggota'); ?>";
-                </script>
-                <?php
-            }
-        }
-    }
-
-    public function logout()
-    {
-        session()->remove('ses_id');
-        session()->remove('ses_user');
-        session()->remove('ses_level');
-        session()->setFlashdata('info', 'Anda telah keluar dari sistem!');
-        ?>
-        <script>
-            document.location = "<?= base_url('anggota/login-anggota'); ?>";
-        </script>
-        <?php
-    }
-
+    /**
+     * Menampilkan form input data anggota baru.
+     * URL: /anggota/input-data-anggota
+     */
     public function input_data_anggota()
     {
-        if (session()->get('ses_id') == "" or session()->get('ses_user') == "" or session()->get('ses_level') == "") {
-            session()->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            ?>
-            <script>
-                document.location = "<?= base_url('anggota/login-anggota'); ?>";
-            </script>
-            <?php
-        } else {
-            echo view('Backend/Template/Header');
-            echo view('Backend/Template/Sidebar');
-            echo view('Backend/MasterAnggota/input-anggota'); // buat view ini
-            echo view('Backend/Template/Footer');
+        // Pengecekan sesi login admin
+        if (!$this->session->get('ses_id') || !$this->session->get('ses_user') || !$this->session->get('ses_level')) {
+            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
+            return redirect()->to(base_url('admin/login-admin'));
         }
+
+        $data['web_title'] = "Input Data Anggota";
+        echo view('Backend/Template/Header', $data);
+        echo view('Backend/Template/Sidebar', $data);
+        echo view('Backend/MasterAnggota/input-anggota', $data);
+        echo view('Backend/Template/Footer', $data);
     }
 
+    /**
+     * Menyimpan data anggota baru.
+     * URL: /anggota/simpan-data-anggota (POST)
+     */
     public function simpan_data_anggota()
     {
-        if (session()->get('ses_id') == "" or session()->get('ses_user') == "" or session()->get('ses_level') == "") {
-            session()->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            ?>
-            <script>
-                document.location = "<?= base_url('anggota/login-anggota'); ?>";
-            </script>
-            <?php
+        // Pengecekan sesi login admin
+        if (!$this->session->get('ses_id') || !$this->session->get('ses_user') || !$this->session->get('ses_level')) {
+            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
+            return redirect()->to(base_url('admin/login-admin'));
+        }
+
+        // --- DEFINISI ATURAN VALIDASI ---
+        $rules = [
+            'nama_anggota' => [
+                'label' => 'Nama Anggota',
+                'rules' => 'required|min_length[3]|max_length[50]',
+                'errors' => [
+                    'required' => '{field} tidak boleh kosong.',
+                    'min_length' => '{field} minimal {param} karakter.',
+                    'max_length' => '{field} maksimal {param} karakter.'
+                ]
+            ],
+            'jenis_kelamin' => [
+                'label' => 'Jenis Kelamin',
+                'rules' => 'required|in_list[Laki-laki,Perempuan]', // Sesuai dengan form HTML
+                'errors' => [
+                    'required' => '{field} tidak boleh kosong.',
+                    'in_list' => '{field} harus Laki-laki atau Perempuan.'
+                ]
+            ],
+            'no_tlp' => [
+                'label' => 'No. Telepon',
+                'rules' => 'required|numeric|max_length[13]',
+                'errors' => [
+                    'required' => '{field} tidak boleh kosong.',
+                    'numeric' => '{field} harus berupa angka.',
+                    'max_length' => '{field} maksimal {param} digit.'
+                ]
+            ],
+            'alamat' => [
+                'label' => 'Alamat',
+                'rules' => 'required|min_length[5]|max_length[100]',
+                'errors' => [
+                    'required' => '{field} tidak boleh kosong.',
+                    'min_length' => '{field} minimal {param} karakter.',
+                    'max_length' => '{field} maksimal {param} karakter.'
+                ]
+            ],
+            'email' => [
+                'label' => 'Email',
+                'rules' => 'required|valid_email|is_unique[tbl_anggota.email,is_delete_anggota,0]', // Cek unik hanya yang aktif
+                'errors' => [
+                    'required' => '{field} tidak boleh kosong.',
+                    'valid_email' => '{field} harus format email valid.',
+                    'is_unique' => '{field} sudah digunakan.'
+                ]
+            ],
+            'password_anggota' => [
+                'label' => 'Password Anggota',
+                'rules' => 'required|min_length[6]',
+                'errors' => [
+                    'required' => '{field} tidak boleh kosong.',
+                    'min_length' => '{field} minimal {param} karakter.'
+                ]
+            ]
+        ];
+
+        // --- JALANKAN VALIDASI ---
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        // Mengambil data dari POST request
+        $nama_anggota = $this->request->getPost('nama_anggota');
+        $jenis_kelamin = $this->request->getPost('jenis_kelamin');
+        $no_tlp = $this->request->getPost('no_tlp');
+        $alamat = $this->request->getPost('alamat');
+        $email = $this->request->getPost('email');
+        $password_anggota = $this->request->getPost('password_anggota');
+
+        // Generate ID anggota otomatis (sesuai logika Anda untuk ANGxxx)
+        $hasilAutoNumber = $this->mAnggota->autoNumber()->getRowArray();
+        $id_anggota = "ANG001";
+        if ($hasilAutoNumber && !empty($hasilAutoNumber['id_anggota'])) {
+            $kode   = $hasilAutoNumber['id_anggota'];
+            $noUrut = (int)substr($kode, 3);
+            $noUrut++;
+            $id_anggota = "ANG" . sprintf("%03s", $noUrut);
+        }
+
+        // Menyiapkan data untuk disimpan
+        $dataSimpan = [
+            'id_anggota'        => $id_anggota,
+            'nama_anggota'      => $nama_anggota,
+            'jenis_kelamin'     => $jenis_kelamin,
+            'no_tlp'            => $no_tlp,
+            'alamat'            => $alamat,
+            'email'             => $email,
+            'password_anggota'  => password_hash($password_anggota, PASSWORD_DEFAULT),
+            'is_delete_anggota' => 0, // Menggunakan integer 0 untuk TINYINT(1)
+            // created_at dan updated_at akan diisi otomatis oleh Model karena useTimestamps = true
+        ];
+
+        // Memanggil method insert() bawaan Model CodeIgniter 4
+        if ($this->mAnggota->insert($dataSimpan)) {
+            $this->session->setFlashdata('success', 'Data Anggota Berhasil Ditambahkan!');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
         } else {
-            $modelAnggota = new M_Anggota(); // inisiasi model
-
-            $nama          = $this->request->getPost('nama_anggota');
-            $jenis_kelamin = $this->request->getPost('jenis_kelamin');
-            $no_tlp        = $this->request->getPost('no_tlp');
-            $alamat        = $this->request->getPost('alamat');
-            $email         = $this->request->getPost('email');
-
-            $cekEmail = $modelAnggota->getDataAnggota(['email' => $email])->getNumRows();
-            if ($cekEmail > 0) {
-                session()->setFlashdata('error', 'Email sudah digunakan!!');
-                ?>
-                <script>
-                    history.go(-1);
-                </script>
-                <?php
-            } else {
-                // Generate ID anggota otomatis mirip admin, sesuaikan prefix jika perlu
-                $hasil = $modelAnggota->autoNumber()->getRowArray();
-                if (!$hasil) {
-                    $id = "ANG001";
-                } else {
-                    $kode   = $hasil['id_anggota'];
-                    $noUrut = (int)substr($kode, -3);
-                    $noUrut++;
-                    $id     = "ANG" . sprintf("%03s", $noUrut);
-                }
-            }
-
-            $datasimpan = [
-                'id_anggota'        => $id,
-                'nama_anggota'      => $nama,
-                'jenis_kelamin'     => $jenis_kelamin,
-                'no_tlp'            => $no_tlp,
-                'alamat'            => $alamat,
-                'email'             => $email,
-                'password_anggota'  => password_hash('pass_anggota', PASSWORD_DEFAULT),
-                'is_delete_anggota' => '0',
-                'created_at'        => date('Y-m-d H:i:s'),
-                'updated_at'        => date('Y-m-d H:i:s'),
-            ];
-            $modelAnggota->saveDataAnggota($datasimpan);
-            session()->setFlashdata('success', 'Data Anggota Berhasil Ditambahkan!!');
-            ?>
-            <script>
-                document.location = "<?= base_url('anggota/master-data-anggota'); ?>";
-            </script>
-            <?php
+            $this->session->setFlashdata('error', 'Gagal menyimpan data anggota ke database. Periksa log error.');
+            return redirect()->back()->withInput();
         }
     }
 
+    /**
+     * Menampilkan master data anggota.
+     * URL: /anggota/master-data-anggota
+     */
     public function master_data_anggota()
     {
-        if (session()->get('ses_id') == "" or session()->get('ses_user') == "" or session()->get('ses_level') == "") {
-            session()->setFlashdata('error', 'Silakan login terlebih dahulu!');
-            ?>
-            <script>
-                document.location = "<?= base_url('anggota/login-anggota'); ?>";
-            </script>
-            <?php
-        } else {
-            $modelAnggota = new M_Anggota();
-            $uri          = service('uri');
-            $pages        = $uri->getSegment(2);
-            $dataUser     = $modelAnggota->getDataAnggota(['is_delete_anggota' => '0'])->getResultArray();
-
-            $data['pages']     = $pages;
-            $data['data_user'] = $dataUser;
-
-            echo view('Backend/Template/Header', $data);
-            echo view('Backend/Template/Sidebar', $data);
-            echo view('Backend/MasterAnggota/master-data-anggota', $data);
-            echo view('Backend/Template/Footer', $data);
+        // Pengecekan sesi login admin
+        if (!$this->session->get('ses_id') || !$this->session->get('ses_user') || !$this->session->get('ses_level')) {
+            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
+            return redirect()->to(base_url('admin/login-admin'));
         }
+        
+        $uri          = service('uri');
+        
+        // MENGAMBIL SEMUA DATA ANGGOTA YANG AKTIF MENGGUNAKAN METODE getActiveMembers()
+        $dataAnggota = $this->mAnggota->getActiveMembers();
+
+        $data['pages']     = $uri->getSegment(2) ?? 'master-data-anggota';
+        $data['data_user'] = $dataAnggota; // Mengirim data ke view dengan nama 'data_user'
+        $data['web_title'] = "Master Data Anggota";
+
+        echo view('Backend/Template/Header', $data);
+        echo view('Backend/Template/Sidebar', $data);
+        echo view('Backend/MasterAnggota/master-data-anggota', $data);
+        echo view('Backend/Template/Footer', $data);
     }
 
-    public function edit_data_anggota()
+    /**
+     * Menampilkan form edit data anggota.
+     * URL: /anggota/edit-data-anggota/{id_anggota} (GET)
+     */
+    public function edit_data_anggota($id_anggota = null)
     {
-        $uri       = service('uri');
-        $idEdit    = $uri->getSegment(3);
-        $modelAnggota = new M_Anggota();
+        // Pengecekan sesi login admin
+        if (!$this->session->get('ses_id') || !$this->session->get('ses_user') || !$this->session->get('ses_level')) {
+            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
+            return redirect()->to(base_url('admin/login-admin'));
+        }
 
-        // Mengambil data anggota dari tabel anggota di database berdasarkan parameter yang dikirimkan
-        $dataAnggota = $modelAnggota->getDataAnggota(['sha1(id_anggota)' => $idEdit])->getRowArray();
+        // Validasi ID anggota dari URL
+        if (empty($id_anggota)) {
+            $this->session->setFlashdata('error', 'ID Anggota tidak valid.');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
+        }
 
-        session()->set(['idUpdate' => $dataAnggota['id_anggota']]);
+        // Mengambil data anggota berdasarkan ID (find() sudah menghormati soft delete)
+        $dataAnggota = $this->mAnggota->find($id_anggota);
 
-        $page = $uri->getSegment(2);
-
-        $data['page']        = $page;
-        $data['web_title']   = "Edit Data Anggota";
+        // Memeriksa apakah data anggota ditemukan
+        if (!$dataAnggota) { // find() akan mengembalikan null jika tidak ditemukan atau terhapus soft delete
+            $this->session->setFlashdata('error', 'Data anggota tidak ditemukan atau sudah dihapus!');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
+        }
+        
+        $data['page']         = 'edit-data-anggota';
+        $data['web_title']    = "Edit Data Anggota";
         $data['data_anggota'] = $dataAnggota;
 
         echo view('Backend/Template/Header', $data);
@@ -210,65 +213,116 @@ class Anggota extends BaseController
         echo view('Backend/Template/Footer', $data);
     }
 
+    /**
+     * Memperbarui data anggota.
+     * URL: /anggota/update-data-anggota (POST)
+     */
     public function update_data_anggota()
     {
-        $modelAnggota = new M_Anggota();
+        // Pengecekan sesi login admin
+        if (!$this->session->get('ses_id') || !$this->session->get('ses_user') || !$this->session->get('ses_level')) {
+            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
+            return redirect()->to(base_url('admin/login-admin'));
+        }
 
-        $idUpdate = session()->get('idUpdate');
-        $nama     = $this->request->getPost('nama_anggota');
+        // Ambil ID dari form hidden
+        $idUpdate = $this->request->getPost('id_anggota');
+
+        // Validasi ID anggota
+        if (empty($idUpdate)) {
+            $this->session->setFlashdata('error', 'ID Anggota tidak valid untuk update.');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
+        }
+        
+        $nama          = $this->request->getPost('nama_anggota');
         $jenis_kelamin = $this->request->getPost('jenis_kelamin');
-        $no_tlp   = $this->request->getPost('no_tlp');
-        $alamat   = $this->request->getPost('alamat');
-        $email    = $this->request->getPost('email');
+        $no_tlp        = $this->request->getPost('no_tlp');
+        $alamat        = $this->request->getPost('alamat');
+        $email         = $this->request->getPost('email');
+        $password_baru = $this->request->getPost('password_anggota');
 
-        if ($nama == "" or $jenis_kelamin == "" or $no_tlp == "" or $alamat == "" or $email == "") {
-            session()->setFlashdata('error', 'Isian tidak boleh kosong!!');
-            ?>
-            <script>
-                history.go(-1);
-            </script>
-            <?php
+        // --- DEFINISI ATURAN VALIDASI UNTUK UPDATE ---
+        $rules = [
+            'nama_anggota' => 'required|min_length[3]|max_length[50]',
+            'jenis_kelamin' => 'required|in_list[Laki-laki,Perempuan]',
+            'no_tlp' => 'required|numeric|max_length[13]',
+            'alamat' => 'required|min_length[5]|max_length[100]',
+            'email' => "required|valid_email|is_unique[tbl_anggota.email,id_anggota,{$idUpdate}]",
+            'password_anggota' => 'permit_empty|min_length[6]',
+        ];
+
+        // --- JALANKAN VALIDASI ---
+        if (!$this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        // Menyiapkan data untuk diperbarui
+        $dataUpdate = [
+            'nama_anggota'  => $nama,
+            'jenis_kelamin' => $jenis_kelamin,
+            'no_tlp'        => $no_tlp,
+            'alamat'        => $alamat,
+            'email'         => $email,
+            // updated_at akan diisi otomatis oleh Model karena useTimestamps = true
+        ];
+
+        // Hash password baru jika diisi di form
+        if (!empty($password_baru)) {
+            $dataUpdate['password_anggota'] = password_hash($password_baru, PASSWORD_DEFAULT);
+        }
+
+        // Memanggil method update() bawaan Model CodeIgniter 4
+        if ($this->mAnggota->update($idUpdate, $dataUpdate)) {
+            $this->session->setFlashdata('success', 'Data Anggota Berhasil Diperbarui!');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
         } else {
-            $dataUpdate = [
-                'nama_anggota'  => $nama,
-                'jenis_kelamin' => $jenis_kelamin,
-                'no_tlp'        => $no_tlp,
-                'alamat'        => $alamat,
-                'email'         => $email,
-                'updated_at'    => date("Y-m-d H:i:s"),
-            ];
-            $whereUpdate  = ['id_anggota' => $idUpdate];
-
-            $modelAnggota->updateDataAnggota($dataUpdate, $whereUpdate);
-            session()->remove('idUpdate');
-            session()->setFlashdata('success', 'Data Anggota Berhasil Diperbaharui!');
-            ?>
-            <script>
-                document.location = "<?= base_url('anggota/master-data-anggota'); ?>";
-            </script>
-            <?php
+            $this->session->setFlashdata('error', 'Gagal memperbarui data anggota. Periksa log error.');
+            return redirect()->back()->withInput();
         }
     }
 
-    public function hapus_data_anggota()
+    /**
+     * Menghapus data anggota (soft delete).
+     * URL: /anggota/hapus-data-anggota/{id_anggota} (POST)
+     */
+    public function hapus_data_anggota($id_anggota = null)
     {
-        $modelAnggota = new M_Anggota();
-        $uri          = service('uri');
-        $idHapus      = $uri->getSegment(3);
+        // Pengecekan sesi login admin
+        if (!$this->session->get('ses_id') || !$this->session->get('ses_user') || !$this->session->get('ses_level')) {
+            $this->session->setFlashdata('error', 'Silakan login terlebih dahulu!');
+            return redirect()->to(base_url('admin/login-admin'));
+        }
 
-        $dataUpdate = [
-            'is_delete_anggota' => '1',
-            'updated_at'        => date("Y-m-d H:i:s"),
-        ];
+        // Validasi ID anggota dari URL
+        if (empty($id_anggota)) {
+            $this->session->setFlashdata('error', 'ID Anggota tidak valid untuk dihapus.');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
+        }
 
-        $whereUpdate = ['sha1(id_anggota)' => $idHapus];
+        // Mengambil data anggota untuk memastikan keberadaan dan statusnya (aktif/dihapus)
+        // Gunakan withDeleted() untuk mencari terlepas dari status soft delete
+        $anggota = $this->mAnggota->withDeleted()->find($id_anggota); // Perbaikan: Gunakan withDeleted()
 
-        $modelAnggota->updateDataAnggota($dataUpdate, $whereUpdate);
-        session()->setFlashdata('success', 'Data Anggota Berhasil Dihapus!');
-        ?>
-        <script>
-            document.location = "<?= base_url('anggota/master-data-anggota'); ?>";
-        </script>
-        <?php
+        // Memeriksa apakah data anggota ditemukan
+        if (!$anggota) {
+            $this->session->setFlashdata('error', 'Data anggota tidak ditemukan!'); // Pesan disederhanakan
+            return redirect()->to(base_url('anggota/master-data-anggota'));
+        }
+        
+        // Memeriksa apakah anggota sudah di-soft delete
+        if (($anggota['is_delete_anggota'] ?? 0) == 1) { // Perbaikan: Gunakan 0/1 untuk TINYINT(1)
+            $this->session->setFlashdata('error', 'Data anggota sudah dihapus!');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
+        }
+
+        // Memanggil method delete() dari model untuk melakukan soft delete
+        // CodeIgniter Model akan otomatis memperbarui kolom 'is_delete_anggota' menjadi '1'
+        if ($this->mAnggota->delete($id_anggota)) {
+            $this->session->setFlashdata('success', 'Data Anggota Berhasil Dihapus!');
+            return redirect()->to(base_url('anggota/master-data-anggota'));
+        } else {
+            $this->session->setFlashdata('error', 'Gagal menghapus data anggota. Periksa log error.');
+            return redirect()->back();
+        }
     }
 }
