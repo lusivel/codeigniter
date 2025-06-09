@@ -4,74 +4,54 @@ use CodeIgniter\Model;
 
 class M_Kategori extends Model
 {
-    protected $table      = 'tbl_kategori'; // Nama tabel di database
-    protected $primaryKey = 'id_kategori';  // Primary key tabel
-    
-    // Properti Model dasar CodeIgniter 4
-    protected $useAutoIncrement = false; // ID kategori tidak auto-increment (misal: KTG001)
-    protected $returnType     = 'array'; // Mengembalikan hasil dalam bentuk array
-    protected $useSoftDeletes = true;  // Mengaktifkan soft delete bawaan CI4 Model
-    protected $deletedField   = 'is_delete_kategori'; // Kolom di tabel untuk menandai soft delete (value 0/1)
+    protected $table      = 'tbl_kategori';
+    protected $primaryKey = 'id_kategori';  
 
-    // Field yang diizinkan untuk diisi pada tabel tbl_kategori
-    // SANGAT PENTING: SESUAIKAN DENGAN KOLOM REAL DI DATABASE MASTER
+    protected $useAutoIncrement = false; 
+    protected $returnType     = 'array'; 
+    protected $useSoftDeletes = true;  
+    protected $deletedField   = 'is_delete_kategori'; 
+
+    // SANGAT PENTING: HAPUS 'is_delete_kategori', 'created_at', 'updated_at' dari allowedFields
     protected $allowedFields = [
-        'id_kategori', 'nama_kategori',
-        'is_delete_kategori',
-        'created_at', 'updated_at'
+        'id_kategori', 'nama_kategori'
     ];
 
-    // Pengaturan Timestamp untuk created_at dan updated_at
-    protected $useTimestamps = true; //
-    protected $dateFormat    = 'datetime'; // Pastikan format tanggal di DB sesuai (datetime/date/int)
-    protected $createdField  = 'created_at'; //
-    protected $updatedField  = 'updated_at'; //
+    protected $useTimestamps = true; 
+    protected $dateFormat    = 'datetime'; 
+    protected $createdField  = 'created_at'; 
+    protected $updatedField  = 'updated_at'; 
 
-    // Pengaturan Validasi (Opsional, bisa juga di Controller)
-    protected $validationRules    = []; //
-    protected $validationMessages = []; //
-    protected $skipValidation     = false; //
+    protected $validationRules    = []; 
+    protected $validationMessages = []; 
+    protected $skipValidation     = false; 
 
-    // Callbacks (Opsional)
-    protected $allowCallbacks = true; //
-    protected $beforeInsert   = []; //
-    protected $afterInsert    = []; //
-    protected $beforeUpdate   = []; //
-    protected $afterUpdate    = []; //
-    protected $beforeFind     = []; //
-    protected $afterFind      = []; //
-    protected $beforeDelete   = []; //
+    protected $allowCallbacks = true; 
+    protected $beforeInsert   = []; 
+    protected $afterInsert    = []; 
+    protected $beforeUpdate   = []; 
+    protected $afterUpdate    = []; 
+    protected $beforeFind     = []; 
+    protected $afterFind      = []; 
+    protected $beforeDelete   = []; 
     protected $afterDelete    = [];
 
-    /**
-     * Mengambil ID kategori terakhir untuk auto-generate ID string (KTGxxx).
-     * @return object Query Result object.
-     */
     public function autoNumber()
     {
-        // Menggunakan withDeleted(true) yang dipanggil dari instance Model ($this->)
-        // untuk mengambil ID terakhir termasuk yang sudah di-soft delete
-        // agar penomoran tidak bentrok jika ada id_kategori yang sama dengan yang dihapus.
-        $builder = $this->withDeleted(true)->builder();
-        $builder->select($this->primaryKey);
-        $builder->orderBy($this->primaryKey, "DESC");
-        $builder->limit(1);
-        return $builder->get(); // Mengembalikan objek Query Result
+        return $this->selectMax($this->primaryKey, 'id_kategori')
+                    ->orderBy($this->primaryKey, "DESC")
+                    ->first(); 
     }
 
-    /**
-     * Mengambil daftar semua kategori yang aktif (is_delete_kategori = '0').
-     *
-     * @return array Array of active kategori data.
-     */
     public function getActiveKategori()
     {
-        // Menggunakan builder() yang sudah terkait dengan tabel ini
-        // dan secara eksplisit memfilter is_delete_kategori = 0
-        return $this->builder()
-                    ->where('is_delete_kategori', 0) // Filter aktif (integer 0 untuk TINYINT)
-                    ->orderBy('nama_kategori', 'ASC')
-                    ->get()
-                    ->getResultArray();
+        // Karena $useSoftDeletes = true, findAll() secara otomatis hanya mengambil yang aktif.
+        // Tidak perlu lagi orWhere('is_delete_kategori IS NULL')
+        return $this->orderBy('nama_kategori', 'ASC')
+                    ->findAll(); 
     }
+
+    // TIDAK PERLU override method delete() secara manual
+    // Model akan mengurus soft delete secara otomatis jika $allowedFields sudah benar
+    // public function isNamaKategoriExists(...) { ... } // Pindahkan ini ke tempat lain jika Anda memilikinya
 }
