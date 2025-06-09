@@ -37,62 +37,63 @@
                         </div>
                     <?php endif; ?>
 
-                    <table data-toggle="table" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" data-search="true" data-select-item-name="toolbar1" data-pagination="true" data-sort-name="judul_buku" data-sort-order="asc">
+                    <table data-toggle="table" data-show-refresh="true" data-show-toggle="true" data-show-columns="true" data-search="true" data-select-item-name="toolbar1" data-pagination="true" data-sort-name="id_buku" data-sort-order="asc">
                         <thead>
                             <tr>
                                 <th data-sortable="true">No</th>
                                 <th data-sortable="true">ID Buku</th>
-                                <th data-sortable="false">Cover Buku</th>
+                                <th data-sortable="true">Cover Buku</th>
                                 <th data-sortable="true">Judul Buku</th>
                                 <th data-sortable="true">Pengarang</th>
                                 <th data-sortable="true">Penerbit</th>
                                 <th data-sortable="true">Tahun Terbit</th>
                                 <th data-sortable="true">Jumlah Eksemplar</th>
-                                <th data-sortable="true">Kategori Buku</th>
-                                <th data-sortable="true">Rak</th>
-                                <th data-sortable="true">Keterangan</th>
-                                <th>Opsi</th>
+                                <th data-sortable="true">ID Kategori</th> <th data-sortable="true">ID Rak</th> <th data-sortable="true">Keterangan</th>
+                                <th data-sortable="true">E-Book</th> <th>Opsi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (!empty($data_buku)) : ?>
                                 <?php $no = 1; foreach ($data_buku as $buku) : ?>
-                                    <?php if (($buku['is_delete_buku'] ?? 0) == 0): // Filter is_delete_buku ?>
-                                        <tr>
-                                            <td><?= $no++; ?></td>
-                                            <td><?= esc($buku['id_buku']); ?></td>
-                                            <td>
-                                                <?php if (!empty($buku['cover_buku'])) : ?>
-                                                    <img src="<?= base_url('uploads/covers/' . esc($buku['cover_buku'])); ?>" alt="Cover" width="50">
-                                                <?php else : ?>
-                                                    <img src="<?= base_url('assets/img/cover-default.png'); ?>" alt="Default Cover" width="50">
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><?= esc($buku['judul_buku']); ?></td>
-                                            <td><?= esc($buku['pengarang']); ?></td>
-                                            <td><?= esc($buku['penerbit']); ?></td>
-                                            <td><?= esc($buku['tahun_terbit'] ?? '-'); ?></td>
-                                            <td><?= esc($buku['jumlah_eksemplar']); ?></td>
-                                            <td><?= esc($buku['nama_kategori'] ?? '-'); ?></td>
-                                            <td><?= esc($buku['nama_rak'] ?? '-'); ?></td>
-                                            <td><?= esc($buku['keterangan']); ?></td>
-                                            <td>
-                                                <a href="<?= base_url('admin/buku/edit-data-buku/' . esc($buku['id_buku'])); ?>" class="btn btn-sm btn-info" title="Edit Data">
-                                                    <i class="glyphicon glyphicon-pencil"></i> Edit
-                                                </a>
-                                                <form action="<?= base_url('admin/buku/hapus-data-buku/' . esc($buku['id_buku'])); ?>" method="post" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data buku ini?');">
-                                                    <?= csrf_field(); ?>
-                                                    <button type="submit" class="btn btn-sm btn-danger" title="Hapus Data">
-                                                        <i class="glyphicon glyphicon-trash"></i> Hapus
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
+                                    <tr>
+                                        <td><?= $no++; ?></td>
+                                        <td><?= esc($buku['id_buku']); ?></td>
+                                        <td>
+                                            <?php if (!empty($buku['cover_buku'])) : ?>
+                                                <img src="<?= base_url('uploads/covers/' . esc($buku['cover_buku'])); ?>" alt="Cover Buku" width="50">
+                                            <?php else : ?>
+                                                Tidak Ada Cover
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= esc($buku['judul_buku']); ?></td>
+                                        <td><?= esc($buku['pengarang']); ?></td>
+                                        <td><?= esc($buku['penerbit']); ?></td>
+                                        <td><?= esc($buku['tahun_terbit']); ?></td>
+                                        <td><?= esc($buku['jumlah_eksemplar']); ?></td>
+                                        <td><?= esc($buku['id_kategori']); ?></td> <td><?= esc($buku['id_rak']); ?></td> <td><?= esc($buku['keterangan']); ?></td>
+                                        <td>
+                                            <?php if (!empty($buku['e_book'])) : ?>
+                                                <a href="<?= base_url('uploads/ebooks/' . esc($buku['e_book'])); ?>" target="_blank" class="btn btn-xs btn-primary">Lihat E-Book</a>
+                                            <?php else : ?>
+                                                N/A
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <a href="<?= base_url('admin/buku/edit-data-buku/' . esc($buku['id_buku'])); ?>" class="btn btn-sm btn-info" title="Edit Data">
+                                                <i class="glyphicon glyphicon-pencil"></i> Edit
+                                            </a>
+                                            <form action="<?= base_url('admin/buku/hapus-data-buku/' . esc($buku['id_buku'])); ?>" method="post" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data buku ini secara permanen?');">
+                                                <?= csrf_field(); ?>
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Hapus Data">
+                                                    <i class="glyphicon glyphicon-trash"></i> Hapus
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
                                 <?php endforeach; ?>
                             <?php else : ?>
                                 <tr>
-                                    <td colspan="12" class="text-center">Tidak ada data buku yang ditemukan.</td> </tr>
+                                    <td colspan="13" class="text-center">Tidak ada data buku yang ditemukan.</td> </tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
